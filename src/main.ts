@@ -270,7 +270,7 @@ const startSession = (mode: Mode) => {
   const deal = mode === "daily" ? dailyBoard(DATE_ISO) : practiceBoard();
   session = {
     mode, deal,
-    game: { cards: deal.cards, selected: [], foundKeys: [] },
+    game: { cards: deal.cards, selected: [], foundKeys: [], target: 6 },
     startedAt: null, elapsedMs: null, timerId: 0,
   };
   el("badge").hidden = mode === "daily";
