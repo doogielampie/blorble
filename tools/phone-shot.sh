@@ -6,6 +6,7 @@
 # Usage: tools/phone-shot.sh OUT.png W H "/blorble/?query" [PROFILE_DIR]
 set -euo pipefail
 OUT=$1; W=$2; H=$3; APPURL=$4; PROFILE=${5:-$(mktemp -d)}
+rm -f "$OUT"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 SRV=$(mktemp -d)
 ln -s "$ROOT/dist" "$SRV/blorble"
