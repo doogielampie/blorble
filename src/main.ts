@@ -7,7 +7,7 @@ import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
 import { type DayProgress, type SavedState, freshDay, load, recordWin, save } from "./state";
 
-// Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the gate.
+// Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the landing.
 const params = new URLSearchParams(location.search);
 const qdate = params.get("date") ?? "";
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/.test(qdate) ? qdate : todayIso();
@@ -33,11 +33,14 @@ type Session = {
 };
 
 const app = document.getElementById("app")!;
-let session!: Session; // definite-assignment: startSession runs at boot before any handler
+// definite-assignment: a fresh visit reaches showLanding() with session still
+// unassigned (guarded there); every other path runs startSession at boot
+// before any handler can read session.
+let session!: Session;
 
 // Sessions driven by dev/raster params live in a separate storage bucket so a
 // crafted link can never touch (or fake) real daily stats.
-// DEV_SESSION line changes to (mode is a shareable link param, NOT isolated):
+// mode is a shareable link param, NOT isolated:
 const DEV_SESSION = params.has("date") || params.has("solve") || params.has("autoplay") || params.has("hint");
 const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
   ? {
@@ -75,6 +78,13 @@ const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
 const cardEl = (i: number) => stageEl().querySelector(`[data-i="${i}"]`)!;
 
+// Tiny inline-SVG icon helpers (no icon-font dependency).
+const svg = (paths: string, viewBox = "0 0 24 24") =>
+  `<svg viewBox="${viewBox}" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
+const backIcon = () => svg(`<path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
+const checkIcon = () => svg(`<path d="M4 12.5 L9.5 18 L20 6" fill="none" stroke="#0f6e56" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
+const bulbIcon = () => svg(`<path d="M12 3a6 6 0 0 0-3.2 11.08c.45.3.7.8.7 1.32V17h5v-1.6c0-.52.25-1.02.7-1.32A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 20h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 22h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`);
+
 // Legend rows render actual Blorbs so a beginner sees each feature, not just reads its name.
 const legendRow = (label: string, uidPrefix: string, cards: readonly [number, number, number, number][]) => `
       <span>${label}</span>
@@ -105,32 +115,58 @@ const howtoDialogHtml = () => `
       <form method="dialog"><button class="primary">Got it</button></form>
     </dialog>`;
 
+// Fixed sample trios shown on the landing cards (uids namespaced lc*/ld* so
+// they never collide with in-game `c${i}` or how-to `h*` uids).
+const LANDING_TRIOS: Record<PuzzleMode, { uid: string; cards: readonly [number, number, number, number][] }> = {
+  blorblet: { uid: "lc", cards: [[0, 0, 0, 0], [1, 0, 0, 1], [2, 0, 0, 2]] },
+  blorble: { uid: "ld", cards: [[0, 2, 1, 2], [1, 2, 2, 1], [2, 2, 0, 0]] },
+};
+
+const levelCardHtml = (mode: PuzzleMode) => {
+  const m = MODES[mode];
+  return `
+    <div class="level-card" data-mode="${mode}">
+      <div class="row3" data-art></div>
+      <h2>${m.label}</h2>
+      <span class="mut">${m.size} Blorbs · ${m.targetSets} Sets</span>
+      <div class="level-state" data-state></div>
+    </div>`;
+};
+
 const shell = () => {
   app.innerHTML = `
-    <header>
+    <header id="hdr-landing">
       <h1>Blorble</h1>
-      <div class="hud">
-        <span id="badge" class="badge" hidden>practice</span>
-        <span id="timer">0:00</span>
+      <div class="hdr-right">
+        <span id="landing-date" class="mut"></span>
+        <button id="btn-help" class="chip round">?</button>
       </div>
-      <nav><button id="btn-help" class="chip">?</button></nav>
     </header>
-    <div class="bar">
-      <div class="tabs" id="tabs">
-        <button class="tab" data-mode="blorblet">Blorblet</button>
-        <button class="tab" data-mode="blorble">Blorble</button>
-      </div>
-      <div class="actions">
-        <button id="btn-hint" class="chip" hidden>💡 Hint</button>
-        <button id="btn-practice" class="chip">🎲</button>
-      </div>
-    </div>
-    <section id="stage"></section>
-    <section id="found"></section>
+    <section id="landing">
+      ${levelCardHtml("blorblet")}
+      ${levelCardHtml("blorble")}
+    </section>
+    <header id="hdr-game" hidden>
+      <button id="btn-back" class="chip round" aria-label="Back">${backIcon()}</button>
+      <span id="hdr-level"></span>
+      <span id="hdr-meta"><span id="hdr-meta-label" class="mut"></span><b id="timer">0:00</b></span>
+    </header>
+    <section id="game" hidden>
+      <section id="stage"></section>
+      <div id="hint-row"><button id="btn-hint" class="chip" hidden>${bulbIcon()} Hint</button></div>
+      <section id="found"></section>
+    </section>
     ${howtoDialogHtml()}${resultDialogHtml()}`;
-  for (const t of app.querySelectorAll<HTMLButtonElement>(".tab"))
-    t.addEventListener("click", () => startSession(t.dataset.mode as PuzzleMode, false));
-  el("btn-practice").addEventListener("click", () => startSession(session.mode, !session.practice));
+  el("landing-date").textContent = formatDate(DATE_ISO);
+  for (const card of app.querySelectorAll<HTMLElement>(".level-card"))
+    card.addEventListener("click", (e) => {
+      const t = (e.target as HTMLElement).closest<HTMLElement>("[data-play],[data-practice],[data-results]");
+      if (!t) return;
+      const mode = card.dataset.mode as PuzzleMode;
+      if (t.dataset.results !== undefined) { showGame(mode, false); void openResult(); }
+      else showGame(mode, t.dataset.practice !== undefined);
+    });
+  el("btn-back").addEventListener("click", showLanding);
   el("btn-hint").addEventListener("click", onHint);
   el("btn-help").addEventListener("click", openHowTo);
   el("btn-copy-text").addEventListener("click", () => void onCopyText());
@@ -146,10 +182,6 @@ const openHowTo = () => {
   const dlg = el("howto") as HTMLDialogElement;
   dlg.showModal();
   dlg.scrollTop = 0; // showModal() autofocuses the trailing button and drags the scroll with it
-  if (!saved.seenHowTo) {
-    saved = { ...saved, seenHowTo: true };
-    persist();
-  }
 };
 
 // ---------- timer ----------
@@ -165,22 +197,53 @@ const startTimer = () => {
 };
 
 // ---------- rendering ----------
-const GATE_TAGLINE: Record<PuzzleMode, string> = {
-  blorble: "12 Blorbs, 6 hidden Sets. They grin when you catch one. The clock starts when you peek and doesn't stop until you find them all.",
-  blorblet: "The quick one: 9 Blorbs, 4 hidden Sets. Same deal: the clock runs from peek to finish.",
+// Re-renders both landing cards from `saved` — sample trio (happy once that
+// mode is done today) + the Play/Resume/done state row. Pure re-render, no
+// side effects: safe to call before any session exists.
+const renderLanding = () => {
+  for (const mode of ["blorblet", "blorble"] as const) {
+    const card = app.querySelector<HTMLElement>(`.level-card[data-mode="${mode}"]`)!;
+    const dayRec = saved.days[mode];
+    const done = dayRec?.elapsedMs != null;
+    const { uid, cards } = LANDING_TRIOS[mode];
+    card.querySelector("[data-art]")!.innerHTML = cards
+      .map((c, i) => `<span>${renderBlorb(c, `${uid}${i}`, done ? "happy" : "rest")}</span>`)
+      .join("");
+    const state = card.querySelector("[data-state]")!;
+    if (done) {
+      state.innerHTML =
+        `<span class="done-line">${checkIcon()} ${formatTime(dayRec.elapsedMs!)} today</span>` +
+        `<a class="linkish" data-results>results</a>` +
+        `<a class="linkish" data-practice>practice</a>`;
+    } else if (dayRec?.startedAt != null) {
+      state.innerHTML =
+        `<button class="primary" data-play>Resume</button>` +
+        `<a class="linkish" data-practice>practice</a>`;
+    } else {
+      state.innerHTML =
+        `<button class="primary" data-play>Play</button>` +
+        `<a class="linkish" data-practice>practice</a>`;
+    }
+  }
 };
 
-const renderGate = () => {
-  const art = ([[0, 1, 0, 0], [1, 2, 1, 1], [2, 0, 2, 2]] as const)
-    .map((c, i) => `<span>${renderBlorb(c, `g${i}`)}</span>`)
-    .join("");
-  stageEl().innerHTML = `
-    <div class="gate">
-      <div class="gate-art">${art}</div>
-      <p>${GATE_TAGLINE[session.mode]}</p>
-      <button id="btn-play" class="primary">Play · ${formatDate(DATE_ISO)}</button>
-    </div>`;
-  el("btn-play").addEventListener("click", reveal);
+const showLanding = () => {
+  if (session) stopTimer();
+  renderLanding();
+  el("hdr-landing").hidden = false;
+  el("landing").hidden = false;
+  el("hdr-game").hidden = true;
+  el("game").hidden = true;
+};
+
+const showGame = (mode: PuzzleMode, practice: boolean) => {
+  startSession(mode, practice);
+  el("hdr-level").textContent = MODES[mode].label;
+  el("hdr-meta-label").textContent = practice ? "practice · " : `${formatDate(DATE_ISO)} · `;
+  el("hdr-landing").hidden = true;
+  el("landing").hidden = true;
+  el("hdr-game").hidden = false;
+  el("game").hidden = false;
 };
 
 const renderBoard = () => {
@@ -449,9 +512,6 @@ const startSession = (mode: PuzzleMode, practice: boolean) => {
     startedAt: null, elapsedMs: null, timerId: 0,
     hints: dayRec?.hints ?? 0, wrongs: dayRec?.wrongs ?? 0,
   };
-  for (const t of app.querySelectorAll<HTMLButtonElement>(".tab"))
-    t.classList.toggle("active", t.dataset.mode === mode);
-  el("badge").hidden = !practice;
   el("btn-hint").hidden = true;
   el("timer").textContent = "0:00";
   el("found").className = mode; // slot layout hook (Task 8)
@@ -468,21 +528,25 @@ const startSession = (mode: PuzzleMode, practice: boolean) => {
     renderResultBar();
   } else if (dayRec?.startedAt != null) {    // resume mid-game
     reveal();
-  } else {
-    renderGate();
-    renderFound();
+  } else {                                   // untouched today
+    reveal();
   }
 };
 
 // ---------- boot ----------
 shell();
 const qmode = params.get("mode");
+// `mode` only namespaces autoplay/raster flows now — it no longer deep-links
+// into a running clock; a plain `?mode=X` still lands on the landing screen.
 const bootMode: PuzzleMode = qmode === "blorblet" ? "blorblet" : qmode === "blorble" ? "blorble" : saved.lastMode;
-startSession(bootMode, params.get("practice") === "1");
-// auto-reveal only when a daily gate is actually showing
-if (params.get("autoplay") === "1" && !session.practice && session.startedAt === null) reveal();
-// first-visit how-to: only when NEITHER daily has been touched, never under dev params
-if (params.get("howto") === "1" ||
-    (!saved.seenHowTo && !saved.days.blorble && !saved.days.blorblet &&
-      params.get("autoplay") !== "1" && params.get("practice") !== "1"))
-  openHowTo();
+if (params.get("practice") === "1") {
+  showGame(bootMode, true);
+} else if (params.get("autoplay") === "1") {
+  showGame(bootMode, false);
+  // auto-reveal only when a daily gate is actually showing (defensive: showGame's
+  // startSession already reveals the untouched/resume paths on its own)
+  if (!session.practice && session.startedAt === null) reveal();
+} else {
+  showLanding();
+}
+if (params.get("howto") === "1") openHowTo(); // raster affordance only — never auto-opens otherwise
