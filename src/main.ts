@@ -4,7 +4,7 @@ import { type DealtBoard, dailyBoard, practiceBoard } from "./board";
 import { type GameState, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
-import { type SavedState, load, save } from "./state";
+import { type SavedState, freshDay, load, recordWin, save } from "./state";
 
 // Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the gate.
 const params = new URLSearchParams(location.search);
@@ -24,7 +24,7 @@ type Session = {
 const app = document.getElementById("app")!;
 let session!: Session; // definite-assignment: startSession runs at boot before any handler
 
-let saved: SavedState = load(localStorage);
+let saved: SavedState = freshDay(load(localStorage), DATE_ISO);
 const persist = () => save(localStorage, saved);
 
 const el = (id: string) => document.getElementById(id)!;
@@ -160,6 +160,10 @@ const onTap = (i: number) => {
     case "select": cardEl(i).classList.add("sel"); break;
     case "deselect": cardEl(i).classList.remove("sel"); break;
     case "found": {
+      if (session.mode === "daily" && saved.day) {
+        saved = { ...saved, day: { ...saved.day, foundKeys: session.game.foundKeys } };
+        persist();
+      }
       clearSel();
       renderFound();
       react(event.trio, "happy", "happy", 800);
@@ -186,7 +190,16 @@ const clearSel = () => {
 };
 
 const reveal = () => {
-  session.startedAt = Date.now();
+  if (session.mode === "daily") {
+    if (!saved.day) {
+      saved = { ...saved, day: { date: DATE_ISO, foundKeys: [], startedAt: Date.now(), elapsedMs: null } };
+      persist();
+    }
+    session.startedAt = saved.day!.startedAt ?? Date.now();
+    session.game = { ...session.game, foundKeys: [...saved.day!.foundKeys] };
+  } else {
+    session.startedAt = Date.now();
+  }
   renderBoard();
   startTimer();
   const n = Math.min(Number(params.get("solve") ?? 0), session.deal.sets.length);
@@ -195,6 +208,10 @@ const reveal = () => {
 
 const win = () => {
   session.elapsedMs = Date.now() - (session.startedAt ?? Date.now());
+  if (session.mode === "daily") {
+    saved = recordWin(saved, DATE_ISO, session.elapsedMs);
+    persist();
+  }
   stopTimer();
   el("timer").textContent = formatTime(session.elapsedMs);
   for (let i = 0; i < session.deal.cards.length; i++) {
@@ -207,9 +224,12 @@ const win = () => {
 const renderResult = () => {
   const again = session.mode === "practice"
     ? `<button id="btn-again" class="chip">New board</button>` : "";
+  const stats = session.mode === "daily"
+    ? `<span>🔥 ${saved.streak}</span><span>🏆 ${saved.bestMs === null ? "—" : formatTime(saved.bestMs)}</span>`
+    : "";
   el("found").insertAdjacentHTML(
     "beforeend",
-    `<div class="result"><b>6/6 · ${formatTime(session.elapsedMs!)}</b><button id="btn-share" class="primary">Share</button>${again}</div>`,
+    `<div class="result"><b>6/6 · ${formatTime(session.elapsedMs!)}</b>${stats}<button id="btn-share" class="primary">Share</button>${again}</div>`,
   );
   el("btn-share").addEventListener("click", onShare);
   document.getElementById("btn-again")?.addEventListener("click", () => startSession("practice"));
@@ -239,8 +259,20 @@ const startSession = (mode: Mode) => {
   el("btn-mode").textContent = mode === "daily" ? "Practice" : "Daily";
   el("timer").textContent = "0:00";
   if (mode === "practice") { reveal(); return; }
-  renderGate();
-  renderFound();
+  if (saved.day?.elapsedMs != null) {          // finished earlier today: show the result
+    session.game = { ...session.game, foundKeys: [...saved.day.foundKeys] };
+    session.startedAt = saved.day.startedAt;
+    session.elapsedMs = saved.day.elapsedMs;
+    el("timer").textContent = formatTime(session.elapsedMs);
+    renderBoard();
+    for (let i = 0; i < session.deal.cards.length; i++) setFace(i, "happy");
+    renderResult();
+  } else if (saved.day?.startedAt != null) {   // mid-game: resume, wall clock keeps counting
+    reveal();
+  } else {
+    renderGate();
+    renderFound();
+  }
 };
 
 // ---------- boot ----------
