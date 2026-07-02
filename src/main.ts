@@ -46,10 +46,30 @@ const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
     }
   : localStorage;
 let saved: SavedState = freshDay(load(storage), DATE_ISO);
-const persist = () => save(storage, saved);
+// Another same-origin tab may be playing the OTHER daily — merge its freshest
+// same-date progress and bests before writing, so last-writer doesn't clobber.
+const persist = () => {
+  const disk = load(storage);
+  const other: PuzzleMode = session.mode === "blorble" ? "blorblet" : "blorble";
+  const minNonNull = (a: number | null, b: number | null) =>
+    a === null ? b : b === null ? a : Math.min(a, b);
+  saved = {
+    ...saved,
+    days: {
+      ...saved.days,
+      [other]: disk.days[other]?.date === DATE_ISO ? disk.days[other] : saved.days[other],
+    },
+    best: {
+      blorble: minNonNull(saved.best.blorble, disk.best.blorble),
+      blorblet: minNonNull(saved.best.blorblet, disk.best.blorblet),
+    },
+  };
+  save(storage, saved);
+};
 
 let statsBlob: Blob | null = null;
 let statsUrl: string | null = null;
+let openResultGen = 0;
 
 const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
@@ -146,7 +166,7 @@ const startTimer = () => {
 
 // ---------- rendering ----------
 const GATE_TAGLINE: Record<PuzzleMode, string> = {
-  blorble: "12 Blorbs, 6 hidden Sets. The clock starts when you peek and doesn't stop until you find them all.",
+  blorble: "12 Blorbs, 6 hidden Sets. They grin when you catch one. The clock starts when you peek and doesn't stop until you find them all.",
   blorblet: "The quick one: 9 Blorbs, 4 hidden Sets. Same deal: the clock runs from peek to finish.",
 };
 
@@ -314,6 +334,7 @@ const onHint = () => {
 
 const win = () => {
   for (const c of stageEl().querySelectorAll(".hinted")) c.classList.remove("hinted");
+  (el("btn-hint") as HTMLButtonElement).hidden = true;
   session.elapsedMs = Date.now() - (session.startedAt ?? Date.now());
   if (!session.practice) {
     saved = recordWin(saved, session.mode, DATE_ISO, session.elapsedMs);
@@ -357,6 +378,7 @@ const shareInfo = () => ({
 });
 
 const openResult = async () => {
+  const gen = ++openResultGen;
   statsBlob = null;
   if (statsUrl) { URL.revokeObjectURL(statsUrl); statsUrl = null; }
   (el("btn-copy-image") as HTMLButtonElement).disabled = true;
@@ -368,6 +390,7 @@ const openResult = async () => {
   (el("result") as HTMLDialogElement).showModal();
   try {
     statsBlob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
+    if (gen !== openResultGen) return; // a newer open owns the dialog
     statsUrl = URL.createObjectURL(statsBlob);
     el("result-body").insertAdjacentHTML("beforeend", `<img class="stats-card" src="${statsUrl}" alt="">`);
     (el("btn-copy-image") as HTMLButtonElement).disabled = false;
@@ -391,7 +414,10 @@ const onCopyImage = async () => {
   if (!statsBlob) return;
   const file = new File([statsBlob], `blorble-${DATE_ISO}.png`, { type: "image/png" });
   if (navigator.canShare?.({ files: [file] })) {
-    try { await navigator.share({ files: [file] }); return; } catch { /* fall through */ }
+    try { await navigator.share({ files: [file] }); return; }
+    catch (e) {
+      if ((e as DOMException).name === "AbortError") return; // user cancelled the share sheet
+    }
   }
   const btn = el("btn-copy-image");
   try {

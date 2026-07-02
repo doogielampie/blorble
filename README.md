@@ -10,8 +10,9 @@ the clock, and share your time. New board at midnight UTC; unlimited practice bo
 
 ## Hints & Honest Shares
 
-Stuck? Hit the hint button — it builds on your selected Blorbs, or shakes them if they
-can't become a Set. When you solve, your result line shows your time plus 💡 hints used and
+Stuck? Hit the hint button: with nothing selected it points at a Blorb from an unfound
+Set; otherwise it builds on your selection, or shakes it if it can't become a Set. When
+you solve, your result line shows your time plus 💡 hints used and
 ✖️ wrong guesses (or ✨ for a clean solve). The result popup makes a shareable stats-card
 image so you can post your win.
 
