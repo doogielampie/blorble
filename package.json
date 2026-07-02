@@ -2,6 +2,11 @@
   "name": "blorble",
   "private": true,
   "version": "0.1.0",
+  "description": "A daily monster-matching puzzle — find all 6 Sets of Blorbs and race the clock",
+  "license": "MIT",
+  "packageManager": "pnpm@9.15.9",
+  "repository": { "type": "git", "url": "https://github.com/doogielampie/blorble.git" },
+  "homepage": "https://doogielampie.github.io/blorble/",
   "type": "module",
   "scripts": {
     "dev": "vite",

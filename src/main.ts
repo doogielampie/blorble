@@ -11,6 +11,14 @@ const params = new URLSearchParams(location.search);
 const qdate = params.get("date") ?? "";
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/.test(qdate) ? qdate : todayIso();
 
+// A daily tab left open across UTC midnight must not keep serving yesterday's
+// board: re-sync when the player returns to the tab, and guard the moment of
+// reveal. (No mid-play rug-pull — neither fires while actively playing.)
+const dateRolled = () => !params.get("date") && todayIso() !== DATE_ISO;
+window.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible" && dateRolled()) location.reload();
+});
+
 type Mode = "daily" | "practice";
 type Session = {
   mode: Mode;
@@ -24,8 +32,17 @@ type Session = {
 const app = document.getElementById("app")!;
 let session!: Session; // definite-assignment: startSession runs at boot before any handler
 
-let saved: SavedState = freshDay(load(localStorage), DATE_ISO);
-const persist = () => save(localStorage, saved);
+// Sessions driven by dev/raster params live in a separate storage bucket so a
+// crafted link can never touch (or fake) real daily stats.
+const DEV_SESSION = params.has("date") || params.has("solve") || params.has("autoplay");
+const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
+  ? {
+      getItem: (k) => localStorage.getItem(`dev.${k}`),
+      setItem: (k, v) => localStorage.setItem(`dev.${k}`, v),
+    }
+  : localStorage;
+let saved: SavedState = freshDay(load(storage), DATE_ISO);
+const persist = () => save(storage, saved);
 
 const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
@@ -190,6 +207,7 @@ const clearSel = () => {
 };
 
 const reveal = () => {
+  if (session.mode === "daily" && dateRolled()) return location.reload();
   if (session.mode === "daily") {
     if (!saved.day) {
       saved = { ...saved, day: { date: DATE_ISO, foundKeys: [], startedAt: Date.now(), elapsedMs: null } };
