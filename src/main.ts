@@ -94,23 +94,25 @@ const legendRow = (label: string, uidPrefix: string, cards: readonly [number, nu
 
 const howtoDialogHtml = () => `
     <dialog id="howto">
-      <h2>How to play</h2>
-      <p>Every Blorb has 4 features: colour, eyes, shape, and pattern.</p>
-      <div class="legend">
-        ${legendRow("Colour", "hc", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
-        ${legendRow("Eyes", "he", [[0, 0, 0, 0], [0, 1, 0, 0], [0, 2, 0, 0]])}
-        ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
-        ${legendRow("Pattern", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
+      <div class="dialog-scroll">
+        <h2>How to play</h2>
+        <p>Every Blorb has 4 features: colour, eyes, shape, and pattern.</p>
+        <div class="legend">
+          ${legendRow("Colour", "hc", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
+          ${legendRow("Eyes", "he", [[0, 0, 0, 0], [0, 1, 0, 0], [0, 2, 0, 0]])}
+          ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
+          ${legendRow("Pattern", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
+        </div>
+        <p>A Set is 3 Blorbs where each feature is the same on all three, or different on all three.</p>
+        <div class="example">${([[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]] as const)
+          .map((c, i) => `<span>${renderBlorb(c, `ht${i}`)}</span>`).join("")}</div>
+        <p class="caption">Three different colours, everything else the same. That's a Set.</p>
+        <div class="example">${([[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]] as const)
+          .map((c, i) => `<span>${renderBlorb(c, `hx${i}`)}</span>`).join("")}</div>
+        <p class="caption">Every feature different on all three. Also a Set.</p>
+        <p>If one feature is two of a kind, it's not a Set.</p>
+        <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
       </div>
-      <p>A Set is 3 Blorbs where each feature is the same on all three, or different on all three.</p>
-      <div class="example">${([[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]] as const)
-        .map((c, i) => `<span>${renderBlorb(c, `ht${i}`)}</span>`).join("")}</div>
-      <p class="caption">Three different colours, everything else the same. That's a Set.</p>
-      <div class="example">${([[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]] as const)
-        .map((c, i) => `<span>${renderBlorb(c, `hx${i}`)}</span>`).join("")}</div>
-      <p class="caption">Every feature different on all three. Also a Set.</p>
-      <p>If one feature is two of a kind, it's not a Set.</p>
-      <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
       <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
     </dialog>`;
 
@@ -187,7 +189,7 @@ const shell = () => {
 const openHowTo = () => {
   const dlg = el("howto") as HTMLDialogElement;
   dlg.showModal();
-  dlg.scrollTop = 0; // reset scroll position
+  dlg.querySelector(".dialog-scroll")!.scrollTop = 0; // reset scroll position
 };
 
 // ---------- timer ----------
@@ -219,16 +221,16 @@ const renderLanding = () => {
     if (done) {
       state.innerHTML =
         `<span class="done-line">${checkIcon()} ${formatTime(dayRec.elapsedMs!)} today</span>` +
-        `<a class="linkish" data-results>results</a>` +
-        `<a class="linkish" data-practice>practice</a>`;
+        `<button class="linkish" data-results>results</button>` +
+        `<button class="linkish" data-practice>practice</button>`;
     } else if (dayRec?.startedAt != null) {
       state.innerHTML =
         `<button class="primary" data-play>Resume</button>` +
-        `<a class="linkish" data-practice>practice</a>`;
+        `<button class="linkish" data-practice>practice</button>`;
     } else {
       state.innerHTML =
         `<button class="primary" data-play>Play</button>` +
-        `<a class="linkish" data-practice>practice</a>`;
+        `<button class="linkish" data-practice>practice</button>`;
     }
   }
 };
@@ -436,7 +438,7 @@ const resultDialogHtml = () => `
       <button id="btn-copy-image" class="primary" disabled>Copy image</button>
       <button id="btn-copy-text" class="chip">Copy text</button>
     </div>
-    <a id="btn-save-image" class="linkish">save image instead</a>
+    <button id="btn-save-image" class="linkish">save image instead</button>
     <button id="btn-again" class="chip" hidden>New board</button>
   </dialog>`;
 
@@ -450,6 +452,7 @@ const openResult = async () => {
   statsBlob = null;
   if (statsUrl) { URL.revokeObjectURL(statsUrl); statsUrl = null; }
   (el("btn-copy-image") as HTMLButtonElement).disabled = true;
+  (el("btn-save-image") as HTMLButtonElement).disabled = true;
   el("btn-save-image").classList.add("is-disabled");
   const info = shareInfo();
   const [marksLine, contextLine] = cardLines(info);
@@ -469,6 +472,7 @@ const openResult = async () => {
     statsBlob = blob;
     statsUrl = URL.createObjectURL(statsBlob);
     (el("btn-copy-image") as HTMLButtonElement).disabled = false;
+    (el("btn-save-image") as HTMLButtonElement).disabled = false;
     el("btn-save-image").classList.remove("is-disabled");
   } catch { /* canvas unavailable — text sharing still works, image controls stay disabled */ }
 };

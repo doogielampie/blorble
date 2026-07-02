@@ -36,13 +36,7 @@ export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob
     ctx.fillRect(0, 0, 800, 1000);
     const img = new Image();
     img.onload = () => {
-      // mascot, large, top-center
-      const mascotSize = 320;
-      const mascotX = (800 - mascotSize) / 2;
-      const mascotY = 70;
-      ctx.drawImage(img, mascotX, mascotY, mascotSize, mascotSize);
-
-      // speech bubble to the right of the mascot, flattened bottom-left corner
+      // speech bubble first, top-center, flattened bottom-left corner
       const [marksLine = "", contextLine = ""] = cardLines(info);
       const q = quip(info);
       const bubbleX = 40;
@@ -71,21 +65,31 @@ export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob
       ctx.textAlign = "center";
       ctx.fillText(q, bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 12);
 
+      // mascot, below the bubble, aspect-correct (source SVG is 200×214) so
+      // antennae aren't squashed — drawn after the bubble so its bottom edge
+      // (bubbleY + bubbleH = 150) never covers them, with a clear gap below it.
+      const mascotW = 320;
+      const mascotH = Math.round((mascotW * 214) / 200); // 342
+      const mascotX = (800 - mascotW) / 2;
+      const mascotY = bubbleY + bubbleH + 20; // 170 — ≥20px clear of the bubble
+      ctx.drawImage(img, mascotX, mascotY, mascotW, mascotH);
+      const mascotBottom = mascotY + mascotH; // 512
+
       // huge time
       ctx.fillStyle = "#2a2320";
       ctx.font = "700 120px ui-rounded, ui-sans-serif, system-ui";
       ctx.textAlign = "center";
-      ctx.fillText(formatTime(info.elapsedMs), 400, 560);
+      ctx.fillText(formatTime(info.elapsedMs), 400, mascotBottom + 80);
 
       // marks line
       ctx.font = "600 42px ui-rounded, ui-sans-serif, system-ui";
       ctx.fillStyle = "#1f97f0";
-      ctx.fillText(marksLine, 400, 630);
+      ctx.fillText(marksLine, 400, mascotBottom + 150);
 
       // context line
       ctx.font = "500 34px ui-rounded, ui-sans-serif, system-ui";
       ctx.fillStyle = "#8a7d74";
-      ctx.fillText(contextLine, 400, 690);
+      ctx.fillText(contextLine, 400, mascotBottom + 210);
 
       // URL footer
       ctx.font = "500 26px ui-rounded, ui-sans-serif, system-ui";
