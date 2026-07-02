@@ -1,12 +1,19 @@
 # Blorble 👾
 
-**Blorble** is a free daily pattern-matching puzzle. Every day, the same 12
-goofy alien monsters ("Blorbs") hide **exactly 6 Sets** — trios where each
-feature (colour, eye count, shape, pattern) is either the same on all three
-Blorbs or different on all three. Find them all, race the clock, and share
-your time. New board at midnight UTC; unlimited practice boards included.
+**Blorble** is a free daily pattern-matching puzzle. Every day choose your challenge:
+**Blorblet** (9 Blorbs hiding exactly 4 Sets — the quick one) or **Blorble** (12 Blorbs
+hiding exactly 6 Sets). Trios where each feature (colour, eye count, shape, pattern)
+is either the same on all three Blorbs or different on all three. Find them all, race
+the clock, and share your time. New board at midnight UTC; unlimited practice boards included.
 
 **Play: https://doogielampie.github.io/blorble/**
+
+## Hints & Honest Shares
+
+Stuck? Hit the hint button — it builds on your selected Blorbs, or shakes them if they
+can't become a Set. When you solve, your result line shows your time plus 💡 hints used and
+✖️ wrong guesses (or ✨ for a clean solve). The result popup makes a shareable stats-card
+image so you can post your win.
 
 ## Develop
 
