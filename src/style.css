@@ -88,6 +88,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 dialog {
   border: 2.5px solid var(--ink); border-radius: 16px;
   background: var(--paper); color: var(--ink); max-width: 330px; padding: 18px;
+  max-height: 86dvh; overflow-y: auto;
 }
 dialog::backdrop { background: rgba(42, 35, 32, 0.45); }
 dialog h2 { margin: 0 0 8px; font-size: 18px; }
@@ -95,6 +96,10 @@ dialog p { font-size: 14px; line-height: 1.45; margin: 8px 0; }
 .example { display: flex; gap: 6px; }
 .example > span { flex: 1; background: var(--tile); border-radius: 10px; padding: 4px; }
 .caption { color: var(--muted); font-size: 12.5px; }
+.legend { display: grid; grid-template-columns: 64px 1fr; gap: 6px; align-items: center; }
+.legend .row3 { display: flex; gap: 4px; }
+.legend .row3 > span { flex: 1; max-width: 52px; }
+.fineprint { color: var(--muted); font-size: 10.5px; text-align: center; margin: 10px 0 0; }
 
 /* result dialog */
 .stats-card { width: 100%; border-radius: 12px; margin-top: 10px; }

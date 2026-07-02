@@ -55,16 +55,32 @@ const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
 const cardEl = (i: number) => stageEl().querySelector(`[data-i="${i}"]`)!;
 
-// v1 how-to dialog literal, moved into a function unchanged (Task 7 rewrites its content).
+// Legend rows render actual Blorbs so a beginner sees each feature, not just reads its name.
+const legendRow = (label: string, uidPrefix: string, cards: readonly [number, number, number, number][]) => `
+      <span>${label}</span>
+      <div class="row3">${cards.map((c, i) => `<span>${renderBlorb(c, `${uidPrefix}${i}`)}</span>`).join("")}</div>`;
+
 const howtoDialogHtml = () => `
     <dialog id="howto">
       <h2>How to play</h2>
-      <p>Find all <b>6 Sets</b> hiding in the 12 Blorbs. A Set is 3 Blorbs where each feature —
-      <b>colour</b>, <b>eye count</b>, <b>shape</b>, <b>pattern</b> — is either the
-      <b>same on all three</b> or <b>different on all three</b>.</p>
+      <p>Every Blorb has 4 features: colour, eyes, shape, and pattern.</p>
+      <div class="legend">
+        ${legendRow("Colour", "hc", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
+        ${legendRow("Eyes", "he", [[0, 0, 0, 0], [0, 1, 0, 0], [0, 2, 0, 0]])}
+        ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
+        ${legendRow("Pattern", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
+      </div>
+      <p>A Set is 3 Blorbs where each feature is the same on all three, or different on all three.</p>
       <div class="example">${([[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]] as const)
         .map((c, i) => `<span>${renderBlorb(c, `ht${i}`)}</span>`).join("")}</div>
-      <p class="caption">Same eyes, shape and pattern — three different colours. That's a Set!</p>
+      <p class="caption">Three different colours, everything else the same. That's a Set.</p>
+      <div class="example">${([[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]] as const)
+        .map((c, i) => `<span>${renderBlorb(c, `hx${i}`)}</span>`).join("")}</div>
+      <p class="caption">Every feature different on all three. Also a Set.</p>
+      <p>If one feature is two of a kind, it's not a Set.</p>
+      <p>Find every Set on the board to win: Blorblet hides 4, Blorble hides 6. A Blorb can belong to more than one Set.</p>
+      <p>Stuck? A hint points at a Blorb from a Set you haven't found yet. It builds on whatever you've already picked. If your picks can't become a Set, the hint shakes them instead. Hints and wrong guesses show up in your shared result.</p>
+      <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
       <form method="dialog"><button class="primary">Got it</button></form>
     </dialog>`;
 
@@ -106,7 +122,9 @@ const shell = () => {
 };
 
 const openHowTo = () => {
-  (el("howto") as HTMLDialogElement).showModal();
+  const dlg = el("howto") as HTMLDialogElement;
+  dlg.showModal();
+  dlg.scrollTop = 0; // showModal() autofocuses the trailing button and drags the scroll with it
   if (!saved.seenHowTo) {
     saved = { ...saved, seenHowTo: true };
     persist();
@@ -126,6 +144,11 @@ const startTimer = () => {
 };
 
 // ---------- rendering ----------
+const GATE_TAGLINE: Record<PuzzleMode, string> = {
+  blorble: "12 Blorbs, 6 hidden Sets. The clock starts when you peek and doesn't stop until you find them all.",
+  blorblet: "The quick one: 9 Blorbs, 4 hidden Sets. Same deal: the clock runs from peek to finish.",
+};
+
 const renderGate = () => {
   const art = ([[0, 1, 0, 0], [1, 2, 1, 1], [2, 0, 2, 2]] as const)
     .map((c, i) => `<span>${renderBlorb(c, `g${i}`)}</span>`)
@@ -133,7 +156,7 @@ const renderGate = () => {
   stageEl().innerHTML = `
     <div class="gate">
       <div class="gate-art">${art}</div>
-      <p>12 Blorbs are hiding <b>6 Sets</b>. The clock starts when you peek!</p>
+      <p>${GATE_TAGLINE[session.mode]}</p>
       <button id="btn-play" class="primary">Play · ${formatDate(DATE_ISO)}</button>
     </div>`;
   el("btn-play").addEventListener("click", reveal);
