@@ -389,8 +389,9 @@ const openResult = async () => {
     cardLines(info).map((l) => `<p class="stat">${l}</p>`).join("");
   (el("result") as HTMLDialogElement).showModal();
   try {
-    statsBlob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
+    const blob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
     if (gen !== openResultGen) return; // a newer open owns the dialog
+    statsBlob = blob;
     statsUrl = URL.createObjectURL(statsBlob);
     el("result-body").insertAdjacentHTML("beforeend", `<img class="stats-card" src="${statsUrl}" alt="">`);
     (el("btn-copy-image") as HTMLButtonElement).disabled = false;
