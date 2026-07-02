@@ -1,9 +1,10 @@
 import "./style.css";
 import { renderBlorb, type Expression } from "./blorb";
-import { type DealtBoard, dailyBoard } from "./board";
+import { type DealtBoard, dailyBoard, practiceBoard } from "./board";
 import { type GameState, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
+import { type SavedState, load, save } from "./state";
 
 // Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the gate.
 const params = new URLSearchParams(location.search);
@@ -23,6 +24,9 @@ type Session = {
 const app = document.getElementById("app")!;
 let session!: Session; // definite-assignment: startSession runs at boot before any handler
 
+let saved: SavedState = load(localStorage);
+const persist = () => save(localStorage, saved);
+
 const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
 const cardEl = (i: number) => stageEl().querySelector(`[data-i="${i}"]`)!;
@@ -35,11 +39,39 @@ const shell = () => {
         <span id="badge" class="badge" hidden>practice</span>
         <span id="timer">0:00</span>
       </div>
-      <nav></nav>
+      <nav>
+        <button id="btn-mode" class="chip">Practice</button>
+        <button id="btn-help" class="chip">?</button>
+      </nav>
     </header>
     <section id="stage"></section>
     <section id="found"></section>
-    <footer>inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</footer>`;
+    <footer>inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</footer>
+    <dialog id="howto">
+      <h2>How to play</h2>
+      <p>Find all <b>6 Sets</b> hiding in the 12 Blorbs. A Set is 3 Blorbs where each feature —
+      <b>colour</b>, <b>eye count</b>, <b>shape</b>, <b>pattern</b> — is either the
+      <b>same on all three</b> or <b>different on all three</b>.</p>
+      <div class="example">${([[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]] as const)
+        .map((c, i) => `<span>${renderBlorb(c, `ht${i}`)}</span>`).join("")}</div>
+      <p class="caption">Same eyes, shape and pattern — three different colours. That's a Set!</p>
+      <form method="dialog"><button class="primary">Got it</button></form>
+    </dialog>`;
+  el("btn-mode").addEventListener("click", () =>
+    startSession(session.mode === "daily" ? "practice" : "daily"));
+  el("btn-help").addEventListener("click", openHowTo);
+  const icon = document.createElement("link");
+  icon.rel = "icon";
+  icon.href = "data:image/svg+xml," + encodeURIComponent(renderBlorb([0, 1, 0, 0], "fav"));
+  document.head.append(icon);
+};
+
+const openHowTo = () => {
+  (el("howto") as HTMLDialogElement).showModal();
+  if (!saved.seenHowTo) {
+    saved = { ...saved, seenHowTo: true };
+    persist();
+  }
 };
 
 // ---------- timer ----------
@@ -173,11 +205,14 @@ const win = () => {
 };
 
 const renderResult = () => {
+  const again = session.mode === "practice"
+    ? `<button id="btn-again" class="chip">New board</button>` : "";
   el("found").insertAdjacentHTML(
     "beforeend",
-    `<div class="result"><b>6/6 · ${formatTime(session.elapsedMs!)}</b><button id="btn-share" class="primary">Share</button></div>`,
+    `<div class="result"><b>6/6 · ${formatTime(session.elapsedMs!)}</b><button id="btn-share" class="primary">Share</button>${again}</div>`,
   );
   el("btn-share").addEventListener("click", onShare);
+  document.getElementById("btn-again")?.addEventListener("click", () => startSession("practice"));
 };
 
 const onShare = async () => {
@@ -194,18 +229,28 @@ const onShare = async () => {
 
 const startSession = (mode: Mode) => {
   if (session) stopTimer();
-  const deal = dailyBoard(DATE_ISO);
+  const deal = mode === "daily" ? dailyBoard(DATE_ISO) : practiceBoard();
   session = {
     mode, deal,
     game: { cards: deal.cards, selected: [], foundKeys: [] },
     startedAt: null, elapsedMs: null, timerId: 0,
   };
+  el("badge").hidden = mode === "daily";
+  el("btn-mode").textContent = mode === "daily" ? "Practice" : "Daily";
   el("timer").textContent = "0:00";
+  if (mode === "practice") { reveal(); return; }
   renderGate();
   renderFound();
 };
 
 // ---------- boot ----------
 shell();
-startSession("daily");
-if (params.get("autoplay") === "1") reveal();
+startSession(params.get("practice") === "1" ? "practice" : "daily");
+// auto-reveal only when the gate is actually showing (resumed/finished days
+// handle themselves in startSession from Task 14 on)
+if (params.get("autoplay") === "1" && session.mode === "daily" && session.startedAt === null)
+  reveal();
+// first-visit how-to: never over an in-progress/finished day, never under dev params
+if (params.get("howto") === "1" ||
+    (!saved.seenHowTo && !saved.day && params.get("autoplay") !== "1" && params.get("practice") !== "1"))
+  openHowTo();
