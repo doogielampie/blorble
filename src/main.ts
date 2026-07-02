@@ -108,11 +108,8 @@ const howtoDialogHtml = () => `
         .map((c, i) => `<span>${renderBlorb(c, `hx${i}`)}</span>`).join("")}</div>
       <p class="caption">Every feature different on all three. Also a Set.</p>
       <p>If one feature is two of a kind, it's not a Set.</p>
-      <p>Find every Set on the board to win: Blorblet hides 4, Blorble hides 6. A Blorb can belong to more than one Set.</p>
-      <p>Stuck? A hint points at a Blorb from a Set you haven't found yet. It builds on whatever you've already picked. If your picks can't become a Set, the hint shakes them instead. Hints and wrong guesses show up in your shared result.</p>
-      <p>The clock starts when you peek and runs until you finish.</p>
       <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
-      <form method="dialog"><button class="primary">Got it</button></form>
+      <button class="dialog-x" aria-label="Close"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg></button>
     </dialog>`;
 
 // Fixed sample trios shown on the landing cards (uids namespaced lc*/ld* so
@@ -169,6 +166,7 @@ const shell = () => {
   el("btn-back").addEventListener("click", showLanding);
   el("btn-hint").addEventListener("click", onHint);
   el("btn-help").addEventListener("click", openHowTo);
+  document.querySelector(".dialog-x")?.addEventListener("click", () => (el("howto") as HTMLDialogElement).close());
   el("btn-copy-text").addEventListener("click", () => void onCopyText());
   el("btn-copy-image").addEventListener("click", () => void onCopyImage());
   el("btn-save-image").addEventListener("click", onSaveImage);
@@ -181,7 +179,7 @@ const shell = () => {
 const openHowTo = () => {
   const dlg = el("howto") as HTMLDialogElement;
   dlg.showModal();
-  dlg.scrollTop = 0; // showModal() autofocuses the trailing button and drags the scroll with it
+  dlg.scrollTop = 0; // reset scroll position
 };
 
 // ---------- timer ----------
