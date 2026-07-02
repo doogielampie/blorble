@@ -3,7 +3,7 @@
 # width to >=500px and eats ~87px of height: the app renders in a true WxH
 # iframe pinned at the window origin instead. Everything right/below the
 # iframe in the PNG is dead space — judge only the top-left WxH region.
-# Usage: tools/phone-shot.sh OUT.png W H "/blorble/?query" [PROFILE_DIR]
+# Usage: tools/phone-shot.sh OUT.png W H "/blorble/?query" [PROFILE_DIR] [PORT]
 set -euo pipefail
 OUT=$1; W=$2; H=$3; APPURL=$4; PROFILE=${5:-$(mktemp -d)}
 rm -f "$OUT"
@@ -14,7 +14,7 @@ cat > "$SRV/shell.html" <<EOF
 <!doctype html><meta charset="utf-8"><body style="margin:0;background:#888">
 <iframe style="border:none;display:block;width:${W}px;height:${H}px" src="${APPURL}"></iframe>
 EOF
-PORT=$(( (RANDOM % 20000) + 20000 ))
+PORT=${6:-$(( (RANDOM % 20000) + 20000 ))}
 CHROMEPID=""
 python3 -m http.server "$PORT" -d "$SRV" >/dev/null 2>&1 &
 SRVPID=$!
