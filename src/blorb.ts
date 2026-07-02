@@ -6,7 +6,10 @@ import type { Card } from "./deck";
 // beyond the reference: TypeScript types and the expression parameter
 // (eye/mouth swaps sanctioned by BLORB-SPEC.md "Expressions").
 export const INK = "#2a2320";
-export const COLORS: readonly string[] = ["#3f9fe0", "#f2953c", "#e56aa8"]; // blue / orange / pink
+// CVD-adjusted 2026-07-01 (hex-only change sanctioned by BLORB-SPEC): the
+// original blue #3f9fe0 / pink #e56aa8 collapse to ΔE≈19 under protanopia.
+// src/colors.cvd.test.ts enforces the separation.
+export const COLORS: readonly string[] = ["#1f97f0", "#f2953c", "#eb648c"]; // blue / orange / pink
 
 export type Expression = "rest" | "happy" | "grumpy";
 
