@@ -11,6 +11,19 @@ export const formatTime = (ms: number): string => {
 export const formatDate = (isoDate: string): string =>
   `${MONTHS[Number(isoDate.slice(5, 7)) - 1]} ${Number(isoDate.slice(8, 10))}`;
 
-// Spoiler-free share line. No puzzle numbers in v1 — the date is the id.
-export const shareText = (isoDate: string, elapsedMs: number, practice = false): string =>
-  `Blorble · ${practice ? "practice" : formatDate(isoDate)} · ⏱ ${formatTime(elapsedMs)}`;
+export type ShareInfo = {
+  label: string;       // "Blorble" | "Blorblet" (resolved by the caller)
+  isoDate: string;
+  elapsedMs: number;
+  hints: number;
+  wrongs: number;
+  practice?: boolean;
+};
+
+// Spoiler-free, honesty-first: raw time plus what it took. ✨ = clean solve.
+export const shareText = ({ label, isoDate, elapsedMs, hints, wrongs, practice = false }: ShareInfo): string => {
+  const marks = hints === 0 && wrongs === 0
+    ? "✨"
+    : [hints > 0 ? `💡${hints}` : "", wrongs > 0 ? `✖️${wrongs}` : ""].filter(Boolean).join(" ");
+  return `${label} · ${practice ? "practice" : formatDate(isoDate)} · ⏱ ${formatTime(elapsedMs)} · ${marks}`;
+};

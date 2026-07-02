@@ -15,8 +15,20 @@ describe("share", () => {
     expect(formatDate("2026-12-25")).toBe("Dec 25");
   });
 
-  test("shareText is spoiler-free, date for daily, marked for practice", () => {
-    expect(shareText("2026-07-01", 221_000)).toBe("Blorble · Jul 1 · ⏱ 3:41");
-    expect(shareText("2026-07-01", 221_000, true)).toBe("Blorble · practice · ⏱ 3:41");
+  test("shareText: clean solve gets a sparkle", () => {
+    expect(shareText({ label: "Blorblet", isoDate: "2026-07-02", elapsedMs: 161_000, hints: 0, wrongs: 0 }))
+      .toBe("Blorblet · Jul 2 · ⏱ 2:41 · ✨");
+  });
+  test("shareText: hints and wrongs are shown, zero parts omitted", () => {
+    expect(shareText({ label: "Blorble", isoDate: "2026-07-02", elapsedMs: 433_000, hints: 2, wrongs: 3 }))
+      .toBe("Blorble · Jul 2 · ⏱ 7:13 · 💡2 ✖️3");
+    expect(shareText({ label: "Blorble", isoDate: "2026-07-02", elapsedMs: 433_000, hints: 0, wrongs: 1 }))
+      .toBe("Blorble · Jul 2 · ⏱ 7:13 · ✖️1");
+    expect(shareText({ label: "Blorble", isoDate: "2026-07-02", elapsedMs: 433_000, hints: 1, wrongs: 0 }))
+      .toBe("Blorble · Jul 2 · ⏱ 7:13 · 💡1");
+  });
+  test("shareText: practice replaces the date", () => {
+    expect(shareText({ label: "Blorblet", isoDate: "2026-07-02", elapsedMs: 61_000, hints: 0, wrongs: 0, practice: true }))
+      .toBe("Blorblet · practice · ⏱ 1:01 · ✨");
   });
 });

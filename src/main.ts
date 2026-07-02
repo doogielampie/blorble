@@ -1,10 +1,11 @@
 import "./style.css";
 import { renderBlorb, type Expression } from "./blorb";
-import { type DealtBoard, dailyBoard, practiceBoard } from "./board";
-import { type GameState, tap, trioKey } from "./game";
+import { MODES, type DealtBoard, type PuzzleMode, dailyBoard, practiceBoard } from "./board";
+import { cardLines, renderStatsCard } from "./card";
+import { type GameState, type Hint, hint, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
-import { type SavedState, freshDay, load, recordWin, save } from "./state";
+import { type DayProgress, type SavedState, freshDay, load, recordWin, save } from "./state";
 
 // Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the gate.
 const params = new URLSearchParams(location.search);
@@ -19,14 +20,16 @@ window.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && dateRolled()) location.reload();
 });
 
-type Mode = "daily" | "practice";
 type Session = {
-  mode: Mode;
+  mode: PuzzleMode;
+  practice: boolean;
   deal: DealtBoard;
   game: GameState;
   startedAt: number | null;
-  elapsedMs: number | null; // frozen on win
+  elapsedMs: number | null;
   timerId: number;
+  hints: number;
+  wrongs: number;
 };
 
 const app = document.getElementById("app")!;
@@ -34,7 +37,8 @@ let session!: Session; // definite-assignment: startSession runs at boot before 
 
 // Sessions driven by dev/raster params live in a separate storage bucket so a
 // crafted link can never touch (or fake) real daily stats.
-const DEV_SESSION = params.has("date") || params.has("solve") || params.has("autoplay");
+// DEV_SESSION line changes to (mode is a shareable link param, NOT isolated):
+const DEV_SESSION = params.has("date") || params.has("solve") || params.has("autoplay") || params.has("hint");
 const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
   ? {
       getItem: (k) => localStorage.getItem(`dev.${k}`),
@@ -44,33 +48,15 @@ const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
 let saved: SavedState = freshDay(load(storage), DATE_ISO);
 const persist = () => save(storage, saved);
 
-// v2 shims: hardwired to "blorble" mode for interim compatibility
-const getDayBlorble = () => saved.days.blorble;
-const setDayBlorble = (d: typeof saved.days.blorble) => {
-  saved = { ...saved, days: { ...saved.days, blorble: d } };
-};
-const getBestBlorble = () => saved.best.blorble;
+let statsBlob: Blob | null = null;
+let statsUrl: string | null = null;
 
 const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
 const cardEl = (i: number) => stageEl().querySelector(`[data-i="${i}"]`)!;
 
-const shell = () => {
-  app.innerHTML = `
-    <header>
-      <h1>Blorble</h1>
-      <div class="hud">
-        <span id="badge" class="badge" hidden>practice</span>
-        <span id="timer">0:00</span>
-      </div>
-      <nav>
-        <button id="btn-mode" class="chip">Practice</button>
-        <button id="btn-help" class="chip">?</button>
-      </nav>
-    </header>
-    <section id="stage"></section>
-    <section id="found"></section>
-    <footer>inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</footer>
+// v1 how-to dialog literal, moved into a function unchanged (Task 7 rewrites its content).
+const howtoDialogHtml = () => `
     <dialog id="howto">
       <h2>How to play</h2>
       <p>Find all <b>6 Sets</b> hiding in the 12 Blorbs. A Set is 3 Blorbs where each feature —
@@ -81,9 +67,38 @@ const shell = () => {
       <p class="caption">Same eyes, shape and pattern — three different colours. That's a Set!</p>
       <form method="dialog"><button class="primary">Got it</button></form>
     </dialog>`;
-  el("btn-mode").addEventListener("click", () =>
-    startSession(session.mode === "daily" ? "practice" : "daily"));
+
+const shell = () => {
+  app.innerHTML = `
+    <header>
+      <h1>Blorble</h1>
+      <div class="hud">
+        <span id="badge" class="badge" hidden>practice</span>
+        <span id="timer">0:00</span>
+      </div>
+      <nav><button id="btn-help" class="chip">?</button></nav>
+    </header>
+    <div class="bar">
+      <div class="tabs" id="tabs">
+        <button class="tab" data-mode="blorblet">Blorblet</button>
+        <button class="tab" data-mode="blorble">Blorble</button>
+      </div>
+      <div class="actions">
+        <button id="btn-hint" class="chip" hidden>💡 Hint</button>
+        <button id="btn-practice" class="chip">🎲</button>
+      </div>
+    </div>
+    <section id="stage"></section>
+    <section id="found"></section>
+    ${howtoDialogHtml()}${resultDialogHtml()}`;
+  for (const t of app.querySelectorAll<HTMLButtonElement>(".tab"))
+    t.addEventListener("click", () => startSession(t.dataset.mode as PuzzleMode, false));
+  el("btn-practice").addEventListener("click", () => startSession(session.mode, !session.practice));
+  el("btn-hint").addEventListener("click", onHint);
   el("btn-help").addEventListener("click", openHowTo);
+  el("btn-copy-text").addEventListener("click", () => void onCopyText());
+  el("btn-copy-image").addEventListener("click", () => void onCopyImage());
+  el("btn-save-image").addEventListener("click", onSaveImage);
   const icon = document.createElement("link");
   icon.rel = "icon";
   icon.href = "data:image/svg+xml," + encodeURIComponent(renderBlorb([0, 1, 0, 0], "fav"));
@@ -139,12 +154,20 @@ const miniTrio = (key: string, slot: number) =>
     .join("");
 
 const renderFound = () => {
-  el("found").innerHTML = Array.from({ length: 6 }, (_, n) => {
+  el("found").innerHTML = Array.from({ length: session.game.target }, (_, n) => {
     const key = session.game.foundKeys[n];
     return key
       ? `<div class="slot filled" data-key="${key}">${miniTrio(key, n)}</div>`
       : `<div class="slot"></div>`;
   }).join("");
+  for (const slot of el("found").querySelectorAll<HTMLElement>(".slot.filled"))
+    slot.addEventListener("click", () => {
+      for (const i of slot.dataset.key!.split("-").map(Number)) {
+        const c = cardEl(i);
+        c.classList.add("refind");
+        window.setTimeout(() => c.classList.remove("refind"), 1200);
+      }
+    });
 };
 
 const setFace = (i: number, expression: Expression) => {
@@ -184,11 +207,7 @@ const onTap = (i: number) => {
     case "select": cardEl(i).classList.add("sel"); break;
     case "deselect": cardEl(i).classList.remove("sel"); break;
     case "found": {
-      if (session.mode === "daily" && getDayBlorble()) {
-        const d = getDayBlorble();
-        setDayBlorble(d ? { ...d, foundKeys: session.game.foundKeys } : null);
-        persist();
-      }
+      persistDay({ foundKeys: session.game.foundKeys });
       clearSel();
       renderFound();
       react(event.trio, "happy", "happy", 800);
@@ -203,6 +222,8 @@ const onTap = (i: number) => {
       break;
     }
     case "invalid": {
+      session.wrongs++;
+      persistDay({ wrongs: session.wrongs });
       clearSel();
       react(event.trio, "grumpy", "grumpy", 650);
       break;
@@ -214,29 +235,64 @@ const clearSel = () => {
   for (const b of stageEl().querySelectorAll(".sel")) b.classList.remove("sel");
 };
 
+const persistDay = (patch: Partial<DayProgress>) => {
+  if (session.practice) return;
+  const cur = saved.days[session.mode];
+  if (!cur) return;
+  saved = { ...saved, days: { ...saved.days, [session.mode]: { ...cur, ...patch } } };
+  persist();
+};
+
 const reveal = () => {
-  if (session.mode === "daily" && dateRolled()) return location.reload();
-  if (session.mode === "daily") {
-    if (!getDayBlorble()) {
-      setDayBlorble({ date: DATE_ISO, foundKeys: [], startedAt: Date.now(), elapsedMs: null, hints: 0, wrongs: 0 });
+  if (!session.practice && dateRolled()) return location.reload();
+  if (!session.practice) {
+    if (!saved.days[session.mode]) {
+      saved = { ...saved, days: { ...saved.days, [session.mode]: {
+        date: DATE_ISO, foundKeys: [], startedAt: Date.now(), elapsedMs: null, hints: 0, wrongs: 0,
+      } } };
       persist();
     }
-    const d = getDayBlorble()!;
-    session.startedAt = d.startedAt ?? Date.now();
-    session.game = { ...session.game, foundKeys: [...d.foundKeys] };
+    const rec = saved.days[session.mode]!;
+    session.startedAt = rec.startedAt ?? Date.now();
+    session.game = { ...session.game, foundKeys: [...rec.foundKeys] };
+    session.hints = rec.hints;
+    session.wrongs = rec.wrongs;
   } else {
     session.startedAt = Date.now();
   }
+  el("btn-hint").hidden = false;
   renderBoard();
   startTimer();
   const n = Math.min(Number(params.get("solve") ?? 0), session.deal.sets.length);
   for (const set of session.deal.sets.slice(0, n)) for (const i of set) onTap(i);
+  if (params.get("hint") === "1") onHint(); // raster affordance
+};
+
+const onHint = () => {
+  if (session.elapsedMs !== null || session.startedAt === null) return;
+  const h = hint(session.game, session.deal.sets);
+  if (!h) return;
+  session.hints++;
+  persistDay({ hints: session.hints });
+  if (h.kind === "deadend") {
+    for (const i of session.game.selected) {
+      const c = cardEl(i);
+      c.classList.add("shake");
+      window.setTimeout(() => c.classList.remove("shake"), 500);
+    }
+    return;
+  }
+  const c = cardEl(h.index);
+  c.classList.add("hinted");
+  const clear = () => c.classList.remove("hinted");
+  c.addEventListener("click", clear, { once: true });
 };
 
 const win = () => {
+  for (const c of stageEl().querySelectorAll(".hinted")) c.classList.remove("hinted");
   session.elapsedMs = Date.now() - (session.startedAt ?? Date.now());
-  if (session.mode === "daily") {
-    saved = recordWin(saved, "blorble", DATE_ISO, session.elapsedMs);
+  if (!session.practice) {
+    saved = recordWin(saved, session.mode, DATE_ISO, session.elapsedMs);
     persist();
   }
   stopTimer();
@@ -245,57 +301,121 @@ const win = () => {
     setFace(i, "happy");
     cardEl(i).classList.add("happy");
   }
-  renderResult();
+  renderResultBar();
+  void openResult();
 };
 
-const renderResult = () => {
-  const again = session.mode === "practice"
-    ? `<button id="btn-again" class="chip">New board</button>` : "";
-  const stats = session.mode === "daily"
-    ? `<span>🔥 ${saved.streak}</span><span>🏆 ${getBestBlorble() === null ? "—" : formatTime(getBestBlorble()!)}</span>`
-    : "";
+const renderResultBar = () => {
+  const again = session.practice ? `<button id="btn-again" class="chip">New board</button>` : "";
   el("found").insertAdjacentHTML(
     "beforeend",
-    `<div class="result"><b>6/6 · ${formatTime(session.elapsedMs!)}</b>${stats}<button id="btn-share" class="primary">Share</button>${again}</div>`,
+    `<div class="result"><b>${session.game.foundKeys.length}/${session.game.target} · ${formatTime(session.elapsedMs!)}</b>` +
+      `<button id="btn-results" class="primary">Results</button>${again}</div>`,
   );
-  el("btn-share").addEventListener("click", onShare);
-  document.getElementById("btn-again")?.addEventListener("click", () => startSession("practice"));
+  el("btn-results").addEventListener("click", () => void openResult());
+  document.getElementById("btn-again")?.addEventListener("click", () => startSession(session.mode, true));
 };
 
-const onShare = async () => {
-  const text = shareText(DATE_ISO, session.elapsedMs!, session.mode === "practice");
-  const btn = el("btn-share");
+const resultDialogHtml = () => `
+  <dialog id="result">
+    <div id="result-body"></div>
+    <div class="result-buttons">
+      <button id="btn-copy-text" class="chip">Copy text</button>
+      <button id="btn-copy-image" class="primary" disabled>Copy image</button>
+      <button id="btn-save-image" class="chip" disabled>Save</button>
+    </div>
+    <form method="dialog"><button class="chip">Close</button></form>
+  </dialog>`;
+
+const shareInfo = () => ({
+  label: MODES[session.mode].label, isoDate: DATE_ISO, elapsedMs: session.elapsedMs!,
+  hints: session.hints, wrongs: session.wrongs, practice: session.practice,
+});
+
+const openResult = async () => {
+  statsBlob = null;
+  if (statsUrl) { URL.revokeObjectURL(statsUrl); statsUrl = null; }
+  (el("btn-copy-image") as HTMLButtonElement).disabled = true;
+  (el("btn-save-image") as HTMLButtonElement).disabled = true;
+  const info = { ...shareInfo(), streak: saved.streak, best: saved.best[session.mode] };
+  el("result-body").innerHTML =
+    `<h2>${session.game.foundKeys.length}/${session.game.target} · ${formatTime(session.elapsedMs!)}</h2>` +
+    cardLines(info).map((l) => `<p class="stat">${l}</p>`).join("");
+  (el("result") as HTMLDialogElement).showModal();
+  try {
+    statsBlob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
+    statsUrl = URL.createObjectURL(statsBlob);
+    el("result-body").insertAdjacentHTML("beforeend", `<img class="stats-card" src="${statsUrl}" alt="">`);
+    (el("btn-copy-image") as HTMLButtonElement).disabled = false;
+    (el("btn-save-image") as HTMLButtonElement).disabled = false;
+  } catch { /* canvas unavailable — text sharing still works, image buttons stay disabled */ }
+};
+
+const onCopyText = async () => {
+  const text = shareText(shareInfo());
+  const btn = el("btn-copy-text");
   try {
     await navigator.clipboard.writeText(text);
     btn.textContent = "Copied!";
-    window.setTimeout(() => (btn.textContent = "Share"), 1500);
+    window.setTimeout(() => (btn.textContent = "Copy text"), 1500);
   } catch {
-    window.prompt("Copy your result:", text); // http/file fallback
+    window.prompt("Copy your result:", text);
   }
 };
 
-const startSession = (mode: Mode) => {
+const onCopyImage = async () => {
+  if (!statsBlob) return;
+  const file = new File([statsBlob], `blorble-${DATE_ISO}.png`, { type: "image/png" });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file] }); return; } catch { /* fall through */ }
+  }
+  const btn = el("btn-copy-image");
+  try {
+    await navigator.clipboard.write([new ClipboardItem({ "image/png": statsBlob })]);
+    btn.textContent = "Copied!";
+    window.setTimeout(() => (btn.textContent = "Copy image"), 1500);
+  } catch {
+    onSaveImage(); // clipboard-image unsupported → download instead
+  }
+};
+
+const onSaveImage = () => {
+  if (!statsUrl) return;
+  const a = document.createElement("a");
+  a.href = statsUrl;
+  a.download = `blorble-${DATE_ISO}.png`;
+  a.click();
+};
+
+const startSession = (mode: PuzzleMode, practice: boolean) => {
   if (session) stopTimer();
-  const deal = mode === "daily" ? dailyBoard(DATE_ISO) : practiceBoard();
+  const m = MODES[mode];
+  const deal = practice ? practiceBoard(mode) : dailyBoard(DATE_ISO, mode);
+  const dayRec = practice ? null : saved.days[mode];
   session = {
-    mode, deal,
-    game: { cards: deal.cards, selected: [], foundKeys: [], target: 6 },
+    mode, practice, deal,
+    game: { cards: deal.cards, selected: [], foundKeys: [], target: m.targetSets },
     startedAt: null, elapsedMs: null, timerId: 0,
+    hints: dayRec?.hints ?? 0, wrongs: dayRec?.wrongs ?? 0,
   };
-  el("badge").hidden = mode === "daily";
-  el("btn-mode").textContent = mode === "daily" ? "Practice" : "Daily";
+  for (const t of app.querySelectorAll<HTMLButtonElement>(".tab"))
+    t.classList.toggle("active", t.dataset.mode === mode);
+  el("badge").hidden = !practice;
+  el("btn-hint").hidden = true;
   el("timer").textContent = "0:00";
-  if (mode === "practice") { reveal(); return; }
-  const d = getDayBlorble();
-  if (d?.elapsedMs != null) {          // finished earlier today: show the result
-    session.game = { ...session.game, foundKeys: [...d.foundKeys] };
-    session.startedAt = d.startedAt;
-    session.elapsedMs = d.elapsedMs;
+  el("found").className = mode; // slot layout hook (Task 8)
+  if (!practice) { saved = { ...saved, lastMode: mode }; persist(); }
+
+  if (practice) { reveal(); return; }
+  if (dayRec?.elapsedMs != null) {           // finished earlier today
+    session.game = { ...session.game, foundKeys: [...dayRec.foundKeys] };
+    session.startedAt = dayRec.startedAt;
+    session.elapsedMs = dayRec.elapsedMs;
     el("timer").textContent = formatTime(session.elapsedMs);
     renderBoard();
     for (let i = 0; i < session.deal.cards.length; i++) setFace(i, "happy");
-    renderResult();
-  } else if (d?.startedAt != null) {   // mid-game: resume, wall clock keeps counting
+    renderResultBar();
+  } else if (dayRec?.startedAt != null) {    // resume mid-game
     reveal();
   } else {
     renderGate();
@@ -305,12 +425,13 @@ const startSession = (mode: Mode) => {
 
 // ---------- boot ----------
 shell();
-startSession(params.get("practice") === "1" ? "practice" : "daily");
-// auto-reveal only when the gate is actually showing (resumed/finished days
-// handle themselves in startSession from Task 14 on)
-if (params.get("autoplay") === "1" && session.mode === "daily" && session.startedAt === null)
-  reveal();
-// first-visit how-to: never over an in-progress/finished day, never under dev params
+const qmode = params.get("mode");
+const bootMode: PuzzleMode = qmode === "blorblet" ? "blorblet" : qmode === "blorble" ? "blorble" : saved.lastMode;
+startSession(bootMode, params.get("practice") === "1");
+// auto-reveal only when a daily gate is actually showing
+if (params.get("autoplay") === "1" && !session.practice && session.startedAt === null) reveal();
+// first-visit how-to: only when NEITHER daily has been touched, never under dev params
 if (params.get("howto") === "1" ||
-    (!saved.seenHowTo && !getDayBlorble() && params.get("autoplay") !== "1" && params.get("practice") !== "1"))
+    (!saved.seenHowTo && !saved.days.blorble && !saved.days.blorblet &&
+      params.get("autoplay") !== "1" && params.get("practice") !== "1"))
   openHowTo();
