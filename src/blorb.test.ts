@@ -40,3 +40,30 @@ describe("renderBlorb (canonical port)", () => {
     expect(renderBlorb([0, 0, 0, 1], "a")).not.toMatch(/<clipPath[^>]*><g/);
   });
 });
+
+describe("expressions", () => {
+  const REST_MOUTH = `<path d="M84 148 Q100 172 116 148 Z" fill="#2a2320"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>`;
+  const HAPPY_MOUTH = `<path d="M76 144 Q100 182 124 144 Z" fill="#2a2320"/><path d="M93 144 L103 144 L98 158 Z" fill="#fff"/>`;
+  const GRUMPY_MOUTH = `<path d="M84 164 Q100 142 116 164 Z" fill="#2a2320"/><path d="M94 164 L102 164 L98 155 Z" fill="#fff"/>`;
+
+  test("happy differs from rest ONLY by the mouth (byte-exact)", () => {
+    const rest = renderBlorb([1, 2, 1, 2], "t");
+    expect(rest).toContain(REST_MOUTH); // canonical rest mouth stays verbatim
+    expect(renderBlorb([1, 2, 1, 2], "t", "happy")).toBe(rest.replace(REST_MOUTH, HAPPY_MOUTH));
+  });
+
+  test("grumpy = rest + brows + swapped mouth, nothing else (byte-exact)", () => {
+    const rest = renderBlorb([1, 2, 1, 2], "t");
+    const grumpy = renderBlorb([1, 2, 1, 2], "t", "grumpy");
+    const noBrows = grumpy.replace(/<(?:line|path)[^>]*stroke-width="5"[^>]*\/>/g, "");
+    expect(noBrows).toBe(rest.replace(REST_MOUTH, GRUMPY_MOUTH));
+  });
+
+  test("grumpy adds one brow per eye; other expressions have none", () => {
+    const brows = (s: string) => (s.match(/stroke-width="5"/g) ?? []).length;
+    expect(brows(renderBlorb([0, 0, 0, 0], "t", "grumpy"))).toBe(1);
+    expect(brows(renderBlorb([0, 1, 0, 0], "t", "grumpy"))).toBe(2);
+    expect(brows(renderBlorb([0, 2, 0, 0], "t", "grumpy"))).toBe(3);
+    expect(brows(renderBlorb([0, 2, 0, 0], "t", "happy"))).toBe(0);
+  });
+});

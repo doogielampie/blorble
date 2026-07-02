@@ -43,6 +43,27 @@ const eyesSvg = (n: number): string => {
     .join("");
 };
 
+// Grumpy brows: one per eye, slanting down toward the face centre
+// (a downward V for a centred eye). Additive layer — attribute channels untouched.
+const browsSvg = (n: number): string => {
+  const xs = Array.from({ length: n }, (_, i) => 100 + (i - (n - 1) / 2) * 42);
+  const s = `stroke="${INK}" stroke-width="5" stroke-linecap="round" fill="none"`;
+  return xs
+    .map((x) => {
+      if (x < 100) return `<line x1="${x - 13}" y1="79" x2="${x + 11}" y2="87" ${s}/>`;
+      if (x > 100) return `<line x1="${x - 11}" y1="87" x2="${x + 13}" y2="79" ${s}/>`;
+      return `<path d="M${x - 13} 79 L${x} 87 L${x + 13} 79" ${s}/>`;
+    })
+    .join("");
+};
+
+// Resting fang mouth is canonical; happy/grumpy are sanctioned eye/mouth swaps.
+const MOUTHS: Record<Expression, string> = {
+  rest: `<path d="M84 148 Q100 172 116 148 Z" fill="${INK}"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>`,
+  happy: `<path d="M76 144 Q100 182 124 144 Z" fill="${INK}"/><path d="M93 144 L103 144 L98 158 Z" fill="#fff"/>`,
+  grumpy: `<path d="M84 164 Q100 142 116 164 Z" fill="${INK}"/><path d="M94 164 L102 164 L98 155 Z" fill="#fff"/>`,
+};
+
 // card = [colour 0-2, eyes 0-2 (renders 1-3), shape 0-2, pattern 0-2 (solid/spots/stripes)]
 // uid must be unique per <svg> in the document (clipPath ids are document-global).
 export const renderBlorb = (card: Card, uid: string, expression: Expression = "rest"): string => {
@@ -57,7 +78,6 @@ export const renderBlorb = (card: Card, uid: string, expression: Expression = "r
       : pi === 2
         ? `<g clip-path="url(#${clip})">${[50, 92, 134, 176].map((y) => `<path d="M-24 ${y} Q100 ${y + 17} 224 ${y}" fill="none" stroke="${dk}" stroke-width="21"/>`).join("")}</g>`
         : "";
-  void expression; // rest-only until Task 6
   return (
     `<svg viewBox="0 0 200 214" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">` +
     // NOTE: clipPath children must be raw shapes — a <g> wrapper silently clips everything away.
@@ -71,9 +91,10 @@ export const renderBlorb = (card: Card, uid: string, expression: Expression = "r
     pattern +
     // 4. crisp outline ON TOP (never covered by the pattern)
     el(`fill="none" stroke="${INK}" stroke-width="4.5"`) +
-    // 5. face
+    // 5. face (expression swaps only eyes/mouth — never the attribute channels)
     eyesSvg(ei + 1) +
-    `<path d="M84 148 Q100 172 116 148 Z" fill="${INK}"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>` +
+    (expression === "grumpy" ? browsSvg(ei + 1) : "") +
+    MOUTHS[expression] +
     `</svg>`
   );
 };
