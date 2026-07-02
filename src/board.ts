@@ -1,10 +1,18 @@
 import { type Card, DECK, allSets } from "./deck";
 import { type Rng, dateToSeed, mulberry32 } from "./seed";
 
+export type PuzzleMode = "blorble" | "blorblet";
+
+export const MODES = {
+  blorble: { size: 12, targetSets: 6, label: "Blorble" },
+  blorblet: { size: 9, targetSets: 4, label: "Blorblet" },
+} as const;
+
+// kept for existing imports/tests
 export const BOARD_SIZE = 12;
 export const TARGET_SETS = 6;
-// Measured over 3650 simulated dates: mean k≈41, max k=293. 10k is unreachable.
-const MAX_ATTEMPTS = 10_000;
+// Measured: blorble mean k≈41 max 293; blorblet mean k≈141 max 1149 (3650 dates). 100k unreachable.
+const MAX_ATTEMPTS = 100_000;
 
 export type DealtBoard = {
   cards: Card[];      // the 12 Blorbs in display order
@@ -21,18 +29,24 @@ const shuffle = <T,>(rng: Rng, xs: readonly T[]): T[] => {
   return a;
 };
 
-// Deterministic deal: try base seed, then base+1, base+2… until the board has
-// exactly TARGET_SETS Sets. Every client converges to the same board.
-export const boardForSeed = (baseSeed: number): DealtBoard => {
+export const boardForSeed = (baseSeed: number, size = 12, targetSets = 6): DealtBoard => {
   for (let k = 0; k < MAX_ATTEMPTS; k++) {
-    const cards = shuffle(mulberry32((baseSeed + k) >>> 0), DECK).slice(0, BOARD_SIZE);
+    const cards = shuffle(mulberry32((baseSeed + k) >>> 0), DECK).slice(0, size);
     const sets = allSets(cards);
-    if (sets.length === TARGET_SETS) return { cards, sets, attempt: k };
+    if (sets.length === targetSets) return { cards, sets, attempt: k };
   }
-  throw new Error("no 6-Set board found — statistically impossible");
+  throw new Error("no qualifying board found — statistically impossible");
 };
 
-export const dailyBoard = (isoDate: string): DealtBoard => boardForSeed(dateToSeed(isoDate));
+// Blorble keeps the v1 seed formula so live boards never re-deal on deploy;
+// Blorblet gets its own namespaced seed stream.
+export const dailyBoard = (isoDate: string, mode: PuzzleMode = "blorble"): DealtBoard => {
+  const m = MODES[mode];
+  const seed = dateToSeed(mode === "blorble" ? isoDate : `basic:${isoDate}`);
+  return boardForSeed(seed, m.size, m.targetSets);
+};
 
-export const practiceBoard = (): DealtBoard =>
-  boardForSeed(Math.floor(Math.random() * 0x100000000));
+export const practiceBoard = (mode: PuzzleMode = "blorble"): DealtBoard => {
+  const m = MODES[mode];
+  return boardForSeed(Math.floor(Math.random() * 0x100000000), m.size, m.targetSets);
+};

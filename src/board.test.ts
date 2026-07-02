@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { allSets } from "./deck";
-import { dailyBoard, practiceBoard } from "./board";
+import { dailyBoard, practiceBoard, type PuzzleMode } from "./board";
 
 describe("board", () => {
   test("dailyBoard is deterministic and pinned for 2026-07-01", () => {
@@ -35,5 +35,35 @@ describe("board", () => {
     const { cards, sets } = practiceBoard();
     expect(cards.length).toBe(12);
     expect(sets.length).toBe(6);
+  });
+
+  test("blorblet daily is deterministic and pinned for 2026-07-01", () => {
+    const b = dailyBoard("2026-07-01", "blorblet");
+    expect(b.attempt).toBe(243);
+    expect(b.cards).toEqual([
+      [0, 2, 2, 0], [0, 2, 2, 2], [1, 1, 1, 2], [0, 0, 2, 0], [2, 1, 2, 2],
+      [0, 1, 2, 0], [2, 1, 0, 0], [0, 1, 2, 1], [2, 1, 0, 1],
+    ]);
+    expect(b.sets).toEqual([[0, 3, 5], [1, 3, 7], [2, 5, 8], [2, 6, 7]]);
+  });
+
+  test("blorblet boards have 9 distinct cards and exactly 4 Sets", () => {
+    for (const iso of ["2026-07-01", "2026-07-02", "2026-12-25"]) {
+      const { cards, sets } = dailyBoard(iso, "blorblet");
+      expect(cards.length).toBe(9);
+      expect(new Set(cards.map((c) => c.join(""))).size).toBe(9);
+      expect(sets.length).toBe(4);
+      expect(allSets(cards)).toEqual(sets);
+    }
+  });
+
+  test("blorble default mode is byte-compatible with v1 seeds", () => {
+    expect(dailyBoard("2026-07-01")).toEqual(dailyBoard("2026-07-01", "blorble"));
+  });
+
+  test("practiceBoard respects mode size/target", () => {
+    const p = practiceBoard("blorblet");
+    expect(p.cards.length).toBe(9);
+    expect(p.sets.length).toBe(4);
   });
 });
