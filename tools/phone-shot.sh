@@ -14,16 +14,18 @@ cat > "$SRV/shell.html" <<EOF
 <!doctype html><meta charset="utf-8"><body style="margin:0;background:#888">
 <iframe style="border:none;display:block;width:${W}px;height:${H}px" src="${APPURL}"></iframe>
 EOF
-PORT=4199
+PORT=$(( (RANDOM % 20000) + 20000 ))
+CHROMEPID=""
 python3 -m http.server "$PORT" -d "$SRV" >/dev/null 2>&1 &
 SRVPID=$!
-sleep 1
+trap 'kill $CHROMEPID $SRVPID 2>/dev/null || true' EXIT
+# our server must own the port — otherwise we would screenshot someone else's content
+for _ in $(seq 1 20); do lsof -ti :"$PORT" 2>/dev/null | grep -qx "$SRVPID" && break; sleep 0.25; done
+lsof -ti :"$PORT" 2>/dev/null | grep -qx "$SRVPID" || { echo "FAILED: http.server did not bind :$PORT"; exit 1; }
 "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" --headless=new --disable-gpu \
   --hide-scrollbars --user-data-dir="$PROFILE" --window-size=$((W + 200)),$((H + 200)) \
   --screenshot="$OUT" "http://localhost:$PORT/shell.html" >/dev/null 2>&1 &
 CHROMEPID=$!
 for _ in $(seq 1 40); do [ -s "$OUT" ] && break; sleep 0.5; done
 sleep 1
-kill "$CHROMEPID" 2>/dev/null || true
-kill "$SRVPID" 2>/dev/null || true
 [ -s "$OUT" ] && echo "wrote $OUT (iframe ${W}x${H} at origin)" || { echo "FAILED: no screenshot"; exit 1; }
