@@ -44,6 +44,13 @@ const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
 let saved: SavedState = freshDay(load(storage), DATE_ISO);
 const persist = () => save(storage, saved);
 
+// v2 shims: hardwired to "blorble" mode for interim compatibility
+const getDayBlorble = () => saved.days.blorble;
+const setDayBlorble = (d: typeof saved.days.blorble) => {
+  saved = { ...saved, days: { ...saved.days, blorble: d } };
+};
+const getBestBlorble = () => saved.best.blorble;
+
 const el = (id: string) => document.getElementById(id)!;
 const stageEl = () => el("stage");
 const cardEl = (i: number) => stageEl().querySelector(`[data-i="${i}"]`)!;
@@ -177,8 +184,9 @@ const onTap = (i: number) => {
     case "select": cardEl(i).classList.add("sel"); break;
     case "deselect": cardEl(i).classList.remove("sel"); break;
     case "found": {
-      if (session.mode === "daily" && saved.day) {
-        saved = { ...saved, day: { ...saved.day, foundKeys: session.game.foundKeys } };
+      if (session.mode === "daily" && getDayBlorble()) {
+        const d = getDayBlorble();
+        setDayBlorble(d ? { ...d, foundKeys: session.game.foundKeys } : null);
         persist();
       }
       clearSel();
@@ -209,12 +217,13 @@ const clearSel = () => {
 const reveal = () => {
   if (session.mode === "daily" && dateRolled()) return location.reload();
   if (session.mode === "daily") {
-    if (!saved.day) {
-      saved = { ...saved, day: { date: DATE_ISO, foundKeys: [], startedAt: Date.now(), elapsedMs: null } };
+    if (!getDayBlorble()) {
+      setDayBlorble({ date: DATE_ISO, foundKeys: [], startedAt: Date.now(), elapsedMs: null, hints: 0, wrongs: 0 });
       persist();
     }
-    session.startedAt = saved.day!.startedAt ?? Date.now();
-    session.game = { ...session.game, foundKeys: [...saved.day!.foundKeys] };
+    const d = getDayBlorble()!;
+    session.startedAt = d.startedAt ?? Date.now();
+    session.game = { ...session.game, foundKeys: [...d.foundKeys] };
   } else {
     session.startedAt = Date.now();
   }
@@ -227,7 +236,7 @@ const reveal = () => {
 const win = () => {
   session.elapsedMs = Date.now() - (session.startedAt ?? Date.now());
   if (session.mode === "daily") {
-    saved = recordWin(saved, DATE_ISO, session.elapsedMs);
+    saved = recordWin(saved, "blorble", DATE_ISO, session.elapsedMs);
     persist();
   }
   stopTimer();
@@ -243,7 +252,7 @@ const renderResult = () => {
   const again = session.mode === "practice"
     ? `<button id="btn-again" class="chip">New board</button>` : "";
   const stats = session.mode === "daily"
-    ? `<span>🔥 ${saved.streak}</span><span>🏆 ${saved.bestMs === null ? "—" : formatTime(saved.bestMs)}</span>`
+    ? `<span>🔥 ${saved.streak}</span><span>🏆 ${getBestBlorble() === null ? "—" : formatTime(getBestBlorble()!)}</span>`
     : "";
   el("found").insertAdjacentHTML(
     "beforeend",
@@ -277,15 +286,16 @@ const startSession = (mode: Mode) => {
   el("btn-mode").textContent = mode === "daily" ? "Practice" : "Daily";
   el("timer").textContent = "0:00";
   if (mode === "practice") { reveal(); return; }
-  if (saved.day?.elapsedMs != null) {          // finished earlier today: show the result
-    session.game = { ...session.game, foundKeys: [...saved.day.foundKeys] };
-    session.startedAt = saved.day.startedAt;
-    session.elapsedMs = saved.day.elapsedMs;
+  const d = getDayBlorble();
+  if (d?.elapsedMs != null) {          // finished earlier today: show the result
+    session.game = { ...session.game, foundKeys: [...d.foundKeys] };
+    session.startedAt = d.startedAt;
+    session.elapsedMs = d.elapsedMs;
     el("timer").textContent = formatTime(session.elapsedMs);
     renderBoard();
     for (let i = 0; i < session.deal.cards.length; i++) setFace(i, "happy");
     renderResult();
-  } else if (saved.day?.startedAt != null) {   // mid-game: resume, wall clock keeps counting
+  } else if (d?.startedAt != null) {   // mid-game: resume, wall clock keeps counting
     reveal();
   } else {
     renderGate();
@@ -302,5 +312,5 @@ if (params.get("autoplay") === "1" && session.mode === "daily" && session.starte
   reveal();
 // first-visit how-to: never over an in-progress/finished day, never under dev params
 if (params.get("howto") === "1" ||
-    (!saved.seenHowTo && !saved.day && params.get("autoplay") !== "1" && params.get("practice") !== "1"))
+    (!saved.seenHowTo && !getDayBlorble() && params.get("autoplay") !== "1" && params.get("practice") !== "1"))
   openHowTo();
