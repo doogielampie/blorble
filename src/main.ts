@@ -80,6 +80,7 @@ const howtoDialogHtml = () => `
       <p>If one feature is two of a kind, it's not a Set.</p>
       <p>Find every Set on the board to win: Blorblet hides 4, Blorble hides 6. A Blorb can belong to more than one Set.</p>
       <p>Stuck? A hint points at a Blorb from a Set you haven't found yet. It builds on whatever you've already picked. If your picks can't become a Set, the hint shakes them instead. Hints and wrong guesses show up in your shared result.</p>
+      <p>The clock starts when you peek and runs until you finish.</p>
       <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
       <form method="dialog"><button class="primary">Got it</button></form>
     </dialog>`;
