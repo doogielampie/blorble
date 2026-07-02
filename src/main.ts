@@ -1,7 +1,7 @@
 import "./style.css";
 import { renderBlorb, type Expression } from "./blorb";
 import { MODES, type DealtBoard, type PuzzleMode, dailyBoard, practiceBoard } from "./board";
-import { cardLines, renderStatsCard } from "./card";
+import { cardLines, quip, renderStatsCard } from "./card";
 import { type GameState, type Hint, hint, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
@@ -84,6 +84,8 @@ const svg = (paths: string, viewBox = "0 0 24 24") =>
 const backIcon = () => svg(`<path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
 const checkIcon = () => svg(`<path d="M4 12.5 L9.5 18 L20 6" fill="none" stroke="#0f6e56" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
 const bulbIcon = () => svg(`<path d="M12 3a6 6 0 0 0-3.2 11.08c.45.3.7.8.7 1.32V17h5v-1.6c0-.52.25-1.02.7-1.32A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 20h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 22h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`);
+const closeIcon = () =>
+  `<svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
 
 // Legend rows render actual Blorbs so a beginner sees each feature, not just reads its name.
 const legendRow = (label: string, uidPrefix: string, cards: readonly [number, number, number, number][]) => `
@@ -109,7 +111,7 @@ const howtoDialogHtml = () => `
       <p class="caption">Every feature different on all three. Also a Set.</p>
       <p>If one feature is two of a kind, it's not a Set.</p>
       <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
-      <button class="dialog-x" aria-label="Close"><svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg></button>
+      <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
     </dialog>`;
 
 // Fixed sample trios shown on the landing cards (uids namespaced lc*/ld* so
@@ -166,10 +168,16 @@ const shell = () => {
   el("btn-back").addEventListener("click", showLanding);
   el("btn-hint").addEventListener("click", onHint);
   el("btn-help").addEventListener("click", openHowTo);
-  document.querySelector(".dialog-x")?.addEventListener("click", () => (el("howto") as HTMLDialogElement).close());
+  el("howto").querySelector(".dialog-x")?.addEventListener("click", () => (el("howto") as HTMLDialogElement).close());
+  el("result").querySelector(".dialog-x")?.addEventListener("click", () => (el("result") as HTMLDialogElement).close());
   el("btn-copy-text").addEventListener("click", () => void onCopyText());
   el("btn-copy-image").addEventListener("click", () => void onCopyImage());
   el("btn-save-image").addEventListener("click", onSaveImage);
+  const again = document.getElementById("btn-again");
+  again?.addEventListener("click", () => {
+    (el("result") as HTMLDialogElement).close();
+    showGame(session.mode, true);
+  });
   const icon = document.createElement("link");
   icon.rel = "icon";
   icon.href = "data:image/svg+xml," + encodeURIComponent(renderBlorb([0, 1, 0, 0], "fav"));
@@ -412,25 +420,24 @@ const win = () => {
 };
 
 const renderResultBar = () => {
-  const again = session.practice ? `<button id="btn-again" class="chip">New board</button>` : "";
   el("found").insertAdjacentHTML(
     "beforeend",
     `<div class="result"><b>${session.game.foundKeys.length}/${session.game.target} · ${formatTime(session.elapsedMs!)}</b>` +
-      `<button id="btn-results" class="primary">Results</button>${again}</div>`,
+      `<button id="btn-results" class="primary">Results</button></div>`,
   );
   el("btn-results").addEventListener("click", () => void openResult());
-  document.getElementById("btn-again")?.addEventListener("click", () => startSession(session.mode, true));
 };
 
 const resultDialogHtml = () => `
   <dialog id="result">
+    <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
     <div id="result-body"></div>
     <div class="result-buttons">
-      <button id="btn-copy-text" class="chip">Copy text</button>
       <button id="btn-copy-image" class="primary" disabled>Copy image</button>
-      <button id="btn-save-image" class="chip" disabled>Save</button>
+      <button id="btn-copy-text" class="chip">Copy text</button>
     </div>
-    <form method="dialog"><button class="chip">Close</button></form>
+    <a id="btn-save-image" class="linkish">save image instead</a>
+    <button id="btn-again" class="chip" hidden>New board</button>
   </dialog>`;
 
 const shareInfo = () => ({
@@ -443,21 +450,27 @@ const openResult = async () => {
   statsBlob = null;
   if (statsUrl) { URL.revokeObjectURL(statsUrl); statsUrl = null; }
   (el("btn-copy-image") as HTMLButtonElement).disabled = true;
-  (el("btn-save-image") as HTMLButtonElement).disabled = true;
-  const info = { ...shareInfo(), streak: saved.streak, best: saved.best[session.mode] };
+  el("btn-save-image").classList.add("is-disabled");
+  const info = shareInfo();
+  const [marksLine, contextLine] = cardLines(info);
   el("result-body").innerHTML =
-    `<h2>${session.game.foundKeys.length}/${session.game.target} · ${formatTime(session.elapsedMs!)}</h2>` +
-    cardLines(info).map((l) => `<p class="stat">${l}</p>`).join("");
+    `<div class="r-top">` +
+      `<div class="r-mascot">${renderBlorb(session.deal.cards[0]!, "mascot", "happy")}</div>` +
+      `<div class="bubble">${quip(info)}</div>` +
+    `</div>` +
+    `<p class="r-time">${formatTime(session.elapsedMs!)}</p>` +
+    `<p class="r-marks">${marksLine}</p>` +
+    `<p class="r-ctx mut">${contextLine}</p>`;
+  (el("btn-again") as HTMLButtonElement).hidden = !session.practice;
   (el("result") as HTMLDialogElement).showModal();
   try {
     const blob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
     if (gen !== openResultGen) return; // a newer open owns the dialog
     statsBlob = blob;
     statsUrl = URL.createObjectURL(statsBlob);
-    el("result-body").insertAdjacentHTML("beforeend", `<img class="stats-card" src="${statsUrl}" alt="">`);
     (el("btn-copy-image") as HTMLButtonElement).disabled = false;
-    (el("btn-save-image") as HTMLButtonElement).disabled = false;
-  } catch { /* canvas unavailable — text sharing still works, image buttons stay disabled */ }
+    el("btn-save-image").classList.remove("is-disabled");
+  } catch { /* canvas unavailable — text sharing still works, image controls stay disabled */ }
 };
 
 const onCopyText = async () => {

@@ -1,49 +1,98 @@
 import { type ShareInfo, formatDate, formatTime } from "./share";
 
-// Text lines for the shareable stats image (pure — the canvas part is thin).
-export const cardLines = (info: ShareInfo & { streak: number; best: number | null }): string[] => {
-  const marks = info.hints === 0 && info.wrongs === 0
-    ? "✨"
-    : [info.hints > 0 ? `💡${info.hints}` : "", info.wrongs > 0 ? `✖️${info.wrongs}` : ""].filter(Boolean).join(" ");
-  const head = `${info.practice ? "practice" : formatDate(info.isoDate)} · ⏱ ${formatTime(info.elapsedMs)} · ${marks}`;
-  if (info.practice) return [head];
-  const lines = [head, `🔥 ${info.streak}-day streak`];
-  if (info.best !== null) lines.push(`🏆 best ${formatTime(info.best)}`);
-  return lines;
+// Performance-aware mascot quip, deterministic per (isoDate, label, outcome) —
+// same result day so every viewer of a shared card sees the same line.
+export const quip = (info: { isoDate: string; label: string; hints: number; wrongs: number }): string => {
+  const CLEAN = ["clean blorbing!", "flawless. the Blorbs bow.", "not a single grump."];
+  const HINTY = ["hints were consumed.", "a little help never hurt.", "the bulb did its part."];
+  const WRONGY = ["a scenic route!", "the Blorbs forgive you.", "grumps happened."];
+  const pool = info.hints === 0 && info.wrongs === 0 ? CLEAN : info.hints > 0 ? HINTY : WRONGY;
+  let h = 0;
+  const key = `${info.isoDate}:${info.label}`;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return pool[h % pool.length]!;
 };
 
-// 1000×620 shareable PNG. Never shows the board (spoiler-free) — one happy
-// Blorb reacting to your time.
-export const renderStatsCard = (
-  info: ShareInfo & { streak: number; best: number | null },
-  blorbSvg: string,
-): Promise<Blob> =>
+// Text lines for the shareable stats image (pure — the canvas part is thin).
+// [marksLine, contextLine] — no streak/best (those live only in-app now).
+export const cardLines = (info: ShareInfo): string[] => {
+  const marksLine = info.hints === 0 && info.wrongs === 0
+    ? "no hints, no misses"
+    : [info.hints > 0 ? `💡${info.hints}` : "", info.wrongs > 0 ? `✖️${info.wrongs}` : ""].filter(Boolean).join(" ");
+  const contextLine = `${info.label} · ${info.practice ? "practice" : formatDate(info.isoDate)}`;
+  return [marksLine, contextLine];
+};
+
+// Portrait 800×1000 shareable PNG mirroring the results dialog — mascot with
+// a speech-bubble quip, huge time, marks line, context line, URL footer.
+// Never shows the board (spoiler-free).
+export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob> =>
   new Promise((resolve, reject) => {
     const canvas = document.createElement("canvas");
-    canvas.width = 1000;
-    canvas.height = 620;
+    canvas.width = 800;
+    canvas.height = 1000;
     const ctx = canvas.getContext("2d")!;
     ctx.fillStyle = "#fbf8f3";
-    ctx.fillRect(0, 0, 1000, 620);
-    ctx.fillStyle = "#f4f0ea";
-    ctx.beginPath();
-    ctx.roundRect(40, 40, 400, 540, 28);
-    ctx.fill();
+    ctx.fillRect(0, 0, 800, 1000);
     const img = new Image();
     img.onload = () => {
-      ctx.drawImage(img, 70, 90, 340, 364);
+      // mascot, large, top-center
+      const mascotSize = 320;
+      const mascotX = (800 - mascotSize) / 2;
+      const mascotY = 70;
+      ctx.drawImage(img, mascotX, mascotY, mascotSize, mascotSize);
+
+      // speech bubble to the right of the mascot, flattened bottom-left corner
+      const [marksLine = "", contextLine = ""] = cardLines(info);
+      const q = quip(info);
+      const bubbleX = 40;
+      const bubbleY = 40;
+      const bubbleW = 720;
+      const bubbleH = 110;
+      const r = 22;
+      ctx.fillStyle = "#f4f0ea";
+      ctx.strokeStyle = "#2a2320";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(bubbleX + r, bubbleY);
+      ctx.lineTo(bubbleX + bubbleW - r, bubbleY);
+      ctx.arcTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + r, r);
+      ctx.lineTo(bubbleX + bubbleW, bubbleY + bubbleH - r);
+      ctx.arcTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX + bubbleW - r, bubbleY + bubbleH, r);
+      ctx.lineTo(bubbleX + 2, bubbleY + bubbleH); // flattened bottom-left corner
+      ctx.lineTo(bubbleX, bubbleY + bubbleH - 2);
+      ctx.lineTo(bubbleX, bubbleY + r);
+      ctx.arcTo(bubbleX, bubbleY, bubbleX + r, bubbleY, r);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
       ctx.fillStyle = "#2a2320";
-      ctx.font = "700 84px ui-rounded, ui-sans-serif, system-ui";
-      ctx.fillText("Blorble", 500, 160);
-      ctx.font = "700 44px ui-rounded, ui-sans-serif, system-ui";
+      ctx.font = "600 34px ui-rounded, ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(q, bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 12);
+
+      // huge time
+      ctx.fillStyle = "#2a2320";
+      ctx.font = "700 120px ui-rounded, ui-sans-serif, system-ui";
+      ctx.textAlign = "center";
+      ctx.fillText(formatTime(info.elapsedMs), 400, 560);
+
+      // marks line
+      ctx.font = "600 42px ui-rounded, ui-sans-serif, system-ui";
       ctx.fillStyle = "#1f97f0";
-      ctx.fillText(info.label, 502, 224);
-      ctx.fillStyle = "#2a2320";
-      ctx.font = "600 40px ui-rounded, ui-sans-serif, system-ui";
-      cardLines(info).forEach((line, i) => ctx.fillText(line, 502, 320 + i * 72));
+      ctx.fillText(marksLine, 400, 630);
+
+      // context line
+      ctx.font = "500 34px ui-rounded, ui-sans-serif, system-ui";
       ctx.fillStyle = "#8a7d74";
-      ctx.font = "500 30px ui-rounded, ui-sans-serif, system-ui";
-      ctx.fillText("doogielampie.github.io/blorble", 502, 560);
+      ctx.fillText(contextLine, 400, 690);
+
+      // URL footer
+      ctx.font = "500 26px ui-rounded, ui-sans-serif, system-ui";
+      ctx.fillStyle = "#8a7d74";
+      ctx.fillText("doogielampie.github.io/blorble", 400, 950);
+
+      ctx.textAlign = "left";
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png");
     };
     img.onerror = () => reject(new Error("blorb image failed"));
