@@ -6,6 +6,8 @@ hiding exactly 6 Sets). Trios where each feature (colour, eye count, shape, patt
 is either the same on all three Blorbs or different on all three. Find them all, race
 the clock, and share your time. New board at midnight UTC; unlimited practice boards included.
 
+Pick your level from the landing screen — each card tracks whether you've finished today's board.
+
 **Play: https://doogielampie.github.io/blorble/**
 
 ## Hints & Honest Shares
