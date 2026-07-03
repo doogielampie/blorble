@@ -355,8 +355,15 @@ const reveal = () => {
   renderBoard();
   startTimer();
   const n = Math.min(Number(params.get("solve") ?? 0), session.deal.sets.length);
+  // Raster affordance: a full solve wins the game, and onHint() no-ops once the
+  // game is finished — so apply ?hint=1 BEFORE the solve loop when it completes
+  // the puzzle (yields a genuine hints>0 result card), and AFTER for a partial
+  // solve so the hint still lands on a not-yet-found Set.
+  const hinting = params.get("hint") === "1";
+  const fullSolve = n > 0 && n === session.deal.sets.length;
+  if (hinting && fullSolve) onHint();
   for (const set of session.deal.sets.slice(0, n)) for (const i of set) onTap(i);
-  if (params.get("hint") === "1") onHint(); // raster affordance
+  if (hinting && !fullSolve) onHint();
 };
 
 const onHint = () => {
