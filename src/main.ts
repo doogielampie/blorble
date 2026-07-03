@@ -178,9 +178,16 @@ const renderSeg = () => {
     (session.practice ? `<button class="opt active" data-seg="practice">Practice</button>` : "");
 };
 
+// showModal autofocuses the first focusable element (the dialog ×) and Chrome
+// treats that programmatic focus as :focus-visible, painting a stray ring on
+// every open (the locked F6 × is bare). Blur it — Tab still restores full
+// keyboard focus rings.
+const blurAutofocus = () => (document.activeElement as HTMLElement | null)?.blur();
+
 const openHowTo = () => {
   const dlg = el("howto") as HTMLDialogElement;
   dlg.showModal();
+  blurAutofocus();
   dlg.querySelector(".dialog-scroll")!.scrollTop = 0; // reset scroll position
 };
 
@@ -451,6 +458,7 @@ const openResult = async () => {
     `<p class="r-marks">${marksLine.replace("no misses", '<span class="em">no misses</span>')}</p>` +
     `<p class="r-ctx mut">${contextLine}</p>`;
   (el("result") as HTMLDialogElement).showModal();
+  blurAutofocus();
   try {
     const blob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
     if (gen !== openResultGen) return; // a newer open owns the dialog
