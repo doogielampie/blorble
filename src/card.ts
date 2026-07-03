@@ -36,8 +36,9 @@ export const receiptModel = (info: ShareInfo): ReceiptModel => ({
   url: "doogielampie.github.io/blorble",
 });
 
-// Portrait 800×1000 shareable PNG mirroring the results dialog — mascot with
-// a speech-bubble quip, huge time, marks line, context line, URL footer.
+// Portrait 800×1000 shareable PNG — the receipt, drawn from the same
+// receiptModel the in-app dialog renders, so the two always match: mascot
+// logo, mode title + size, itemised rows, time, quip, barcode, footer.
 // Never shows the board (spoiler-free).
 export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob> =>
   new Promise((resolve, reject) => {

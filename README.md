@@ -17,8 +17,9 @@ clock only starts when you do. Practice boards live one quiet link away.
 Stuck? Hit the hint button: with nothing selected it points at a Blorb from an unfound
 Set; otherwise it builds on your selection, or shakes it if it can't become a Set. When
 you solve, your result line shows your time plus 💡 hints used and
-✖️ wrong guesses (or ✨ for a clean solve). The result popup makes a shareable stats-card
-image so you can post your win.
+✖️ wrong guesses (or ✨ for a clean solve). The result popup is a printable-style **receipt**
+— mode, sets found, hints, grumps, and your time — that copies to a shareable image so you
+can post your win.
 
 ## Develop
 
