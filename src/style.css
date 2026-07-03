@@ -156,7 +156,7 @@ dialog p { font-size: 14px; line-height: 1.32; margin: 5px 0; }
 .rc-note.rc-quip { font-weight: 700; color: var(--ink); }
 .rc-barcode { height: 30px; width: 74%; margin: 12px auto 6px;
   background: repeating-linear-gradient(90deg, var(--ink) 0 2px, transparent 2px 4px, var(--ink) 4px 5px, transparent 5px 8px, var(--ink) 8px 11px, transparent 11px 13px); }
-.rc-foot { font-size: 10.5px; color: var(--muted); }
+.rc-foot { font-size: 10px; color: var(--muted); white-space: nowrap; } /* keep "practice · …" on one line in the narrow dialog */
 .result-buttons { display: flex; flex-direction: column; align-items: center; gap: 9px; margin: 16px 0 0; }
 .result-buttons .primary { width: 200px; padding: 12px 0; font-size: 16px; }
 #result .is-disabled { pointer-events: none; opacity: 0.4; }
