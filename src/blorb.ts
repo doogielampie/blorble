@@ -4,7 +4,7 @@ import type { Card } from "./deck";
 // Ported VERBATIM from design/blorble-v2/playground.html (locked 2026-07-03).
 // The art is final — do not restyle or re-derive. v2 change: the 4th channel
 // is the ANTENNA-TIP style (ball/star/leaf), replacing v1's pattern channel.
-// The channel is carried by tip SILHOUETTE (ink disc / 10-point star / tilted
+// The channel is carried by tip SILHOUETTE (ink disc / 5-point star / tilted
 // leaf); the gold/green fills are reinforcement only, so it cannot collapse
 // under colour-vision deficiency (see colors.cvd.test.ts).
 export const INK = "#2a2320";

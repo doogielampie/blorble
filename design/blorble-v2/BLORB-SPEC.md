@@ -9,7 +9,7 @@ the "cute" render path). v1 spec/history: `design/blorble/` (do not modify).
 | Colour  | blue `#1f97f0` / orange `#f2953c` / pink `#eb648c` | body fill (CVD gate ΔE≥30, `colors.cvd.test.ts`) |
 | Eyes    | 1 / 2 / 3 | googly eyes, step 44, white r19 (x,105), pupil r11 (x+1,108), highlights r4.3 (x-5,98) + r1.9 (x+6,113) |
 | Shape   | round / ghost / teardrop | body silhouette (unchanged from v1) |
-| Antenna | ball / star / leaf | tip SILHOUETTE (ink disc r10 / 10-pt star rO14 rI7.7 gold `#f0a91e` / leaf 18×13 green `#3fa346`); colour is reinforcement only (relaxed gate ΔE≥20) |
+| Antenna | ball / star / leaf | tip SILHOUETTE (ink disc r10 / 5-pt star rO14 rI7.7 gold `#f0a91e` / leaf 18×13 green `#3fa346`); colour is reinforcement only (relaxed gate ΔE≥20) |
 
 ## Fixed species trim
 Ink `#2a2320` outline 4.5 · ground shadow (ellipse 100,206 r 50×7 @0.15) · straight antenna
@@ -32,3 +32,4 @@ margin and no wasted headroom. Consumers size by width; height:auto.
 - Tip sizes are AREA-matched (~314/317/~310 incl. stroke), not radius-matched — a solid
   disc reads bigger than a spiky star of equal reach.
 - Star d-string is baked from Catmull-Rom smoothing (generator in playground.html).
+- Stats-card canvas (src/card.ts): the 120px time digits at baseline mascotBottom+80 clear the ground shadow's bottom tip by only ~2-4px — if the mascot art or shadow ever grows, bump the +80 offset first.

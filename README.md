@@ -26,7 +26,7 @@ image so you can post your win.
   for visual review of the card art (rasterize with headless Chrome)
 
 Pure game logic lives in small tested modules (`src/deck.ts`, `board.ts`,
-`game.ts`, …); the canonical Blorb art spec lives in `design/blorble-v2/ (v1 history in design/blorble/)`.
+`game.ts`, …); the canonical Blorb art spec lives in `design/blorble-v2/` (v1 history in `design/blorble/`).
 
 ---
 
