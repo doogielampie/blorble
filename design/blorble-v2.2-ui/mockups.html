@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Blorble v2.2 UI mockups — R0</title>
+<style>
+  :root { --paper:#fbf8f3; --ink:#2a2320; --tile:#f4f0ea; --accent:#1f97f0; --muted:#8a7d74; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e7e2da; font-family:ui-rounded,ui-sans-serif,system-ui,sans-serif; color:var(--ink); padding:20px; }
+  h2.rowtitle { font-size:16px; margin:26px 0 10px; }
+  .rowtitle .sub { font-weight:400; color:#6b5d54; font-size:13px; }
+  .frames { display:flex; gap:24px; align-items:flex-start; }
+  .framewrap { text-align:center; }
+  .framecap { font-size:13px; font-weight:700; margin-top:8px; }
+  .framecap .sub { display:block; font-weight:400; color:#6b5d54; font-size:11px; }
+  .phone { width:390px; height:844px; background:var(--paper); border-radius:24px; box-shadow:0 4px 18px rgba(42,35,32,.18); overflow:hidden; position:relative; text-align:left; }
+  .phone.short { height:620px; }
+  .app { height:100%; padding:10px 14px 8px; display:flex; flex-direction:column; gap:8px; }
+
+  /* ---------- top bar shared bits ---------- */
+  .hdr1 { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .wordmark { font-size:19px; font-weight:800; letter-spacing:.5px; margin:0; }
+  .hdrright { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); font-weight:600; }
+  .timer { font-variant-numeric:tabular-nums; font-weight:700; font-size:16px; color:var(--ink); }
+  .qchip { width:30px; height:30px; border-radius:999px; background:var(--tile); border:1.5px solid var(--ink); display:flex; align-items:center; justify-content:center; font-size:15px; font-weight:700; color:var(--ink); }
+  .seg { display:flex; background:var(--tile); border-radius:999px; padding:3px; gap:3px; }
+  .seg.full { width:100%; }
+  .seg .opt { flex:1; text-align:center; padding:7px 14px; border-radius:999px; font-size:14px; font-weight:700; color:var(--muted); position:relative; }
+  .seg .opt.active { background:#fff; color:var(--ink); border:2px solid var(--ink); padding:5px 12px; }
+  .seg .opt .tick { color:#0f6e56; font-size:12px; margin-left:4px; }
+  .seg.compact .opt { padding:5px 12px; font-size:13px; }
+  .seg.compact .opt.active { padding:3px 10px; }
+  .logoblorb { width:26px; height:30px; flex:none; }
+
+  /* ---------- board ---------- */
+  .stage { flex:1; min-height:0; display:flex; align-items:center; justify-content:center; position:relative; }
+  .board { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; width:100%; max-width:min(100%,340px); }
+  .bcard { background:var(--tile); border-radius:14px; padding:6px; }
+  .bcard.back svg { display:block; width:70%; margin:6% auto; }
+  .board.blurred { filter:blur(7px); opacity:.5; }
+
+  /* curtain overlay */
+  .curtain { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+  .curtaincard { background:var(--paper); border:2.5px solid var(--ink); border-radius:16px; padding:18px 22px 16px; width:250px; text-align:center; box-shadow:0 6px 22px rgba(42,35,32,.16); }
+  .curtaincard .mascot { width:76px; margin:0 auto 4px; }
+  .curtaincard h3 { margin:0 0 2px; font-size:18px; }
+  .curtaincard .meta { color:var(--muted); font-size:13px; font-weight:600; margin-bottom:12px; }
+  .playbtn { background:var(--accent); color:#fff; border:none; border-radius:12px; padding:12px 0; width:100%; font-size:17px; font-weight:700; }
+  .practicelink { display:inline-block; margin-top:10px; color:var(--muted); text-decoration:underline; font-size:12px; }
+
+  .phone.n375 { width:375px; height:667px; }
+  /* the stacked bar costs ~40px vs the old header, so the board cap must drop
+     46dvh → ~43dvh for one-screen fit on short phones: 43% of 667 ≈ 287px */
+  .phone.n375 .board { max-width:287px; margin:0 auto; }
+
+  /* timer placement variants (R1) */
+  .hdr1.centered3 { display:grid; grid-template-columns:1fr auto 1fr; align-items:center; }
+  .hdr1.centered3 .hdrright { justify-content:flex-end; }
+  .timer.big { font-size:18px; }
+  .segtime { font-variant-numeric:tabular-nums; font-weight:700; font-size:12.5px; margin-left:6px; color:var(--muted); }
+  .opt.active .segtime { color:var(--ink); }
+  .timerpillrow { display:flex; justify-content:center; }
+  .timerpill { background:var(--tile); border-radius:999px; padding:4px 14px; font-size:14px; font-weight:700; font-variant-numeric:tabular-nums; }
+
+  /* hint + found */
+  .hintrow { display:flex; justify-content:flex-end; }
+  .hintpill { background:var(--tile); border:1.5px solid var(--ink); border-radius:999px; padding:5px 12px; font-size:13px; font-weight:600; }
+  .found { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+  .found.two { grid-template-columns:repeat(2,1fr); }
+  .slot { height:46px; border-radius:12px; border:1.5px dashed #d8d0c5; display:flex; align-items:center; justify-content:center; gap:3px; padding:4px; }
+  .slot.filled { border-style:solid; border-color:var(--ink); background:var(--tile); }
+  .slot .mini { width:30px; }
+  .resultsrow { display:flex; align-items:center; justify-content:center; gap:10px; font-size:14px; padding:2px 0; }
+  .resultsbtn { background:var(--accent); color:#fff; border:none; border-radius:12px; padding:8px 18px; font-size:14px; font-weight:700; }
+
+  /* ---------- results dialogs ---------- */
+  .dim { position:absolute; inset:0; background:rgba(42,35,32,.45); display:flex; align-items:center; justify-content:center; }
+  .rdlg { background:var(--paper); border:2.5px solid var(--ink); border-radius:16px; width:320px; padding:20px 18px 22px; position:relative; text-align:center; }
+  .rclose { position:absolute; top:8px; right:12px; color:var(--muted); font-size:20px; font-weight:600; line-height:1; }
+  .rtop { display:flex; align-items:center; gap:12px; justify-content:center; }
+  .rmascot { width:104px; flex:none; }
+  .bubble { position:relative; border:2px solid var(--ink); border-radius:14px; border-bottom-left-radius:2px; padding:9px 12px; font-size:14.5px; font-weight:700; background:#fff; }
+  .rtime { font-size:42px; font-weight:800; margin:14px 0 2px; font-variant-numeric:tabular-nums; }
+  .rmarks { font-size:15px; font-weight:700; margin:0 0 2px; }
+  .rmarks .em { color:var(--accent); }
+  .rctx { color:var(--muted); font-size:13px; margin:0 0 16px; }
+  .rbtns { display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .rprimary { background:var(--accent); color:#fff; border:none; border-radius:12px; padding:12px 0; width:200px; font-size:16px; font-weight:700; }
+  .rlink { color:var(--muted); text-decoration:underline; font-size:12px; }
+  /* R2 share-card-mirror bits */
+  .r2 .bubble2 { display:inline-block; border:2px solid var(--ink); border-radius:14px; border-bottom-left-radius:2px; padding:8px 14px; font-size:14.5px; font-weight:700; background:#fff; margin-bottom:8px; }
+  .r2 .rmascot { width:112px; margin:0 auto; }
+  .r2 .rurl { color:var(--muted); font-size:10.5px; margin:10px 0 14px; }
+
+  /* ---------- legend fix ---------- */
+  .legendbox { background:var(--paper); border:2.5px solid var(--ink); border-radius:16px; padding:16px; width:330px; }
+  .legend { display:grid; gap:6px; align-items:center; }
+  .legend.before { grid-template-columns:64px 1fr; }
+  .legend.after { grid-template-columns:82px 1fr; column-gap:8px; }
+  .legend span.lab { font-size:14px; }
+  .legend .row3 { display:flex; gap:4px; }
+  .legend .row3 > span { flex:1; max-width:52px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// ---- renderer (JS copy of shipped src/blorb.ts, mockup use only) ----
+const INK="#2a2320";
+const COLORS=["#1f97f0","#f2953c","#eb648c"];
+const TIP_COLORS=[INK,"#f0a91e","#3fa346"];
+const SHAPES=[
+ a=>`<circle cx="100" cy="116" r="78" ${a}/>`,
+ a=>`<path d="M30 160 C24 82 50 30 100 30 C150 30 176 82 170 160 C170 188 123 188 123 160 C123 188 77 188 77 160 C77 188 30 188 30 160 Z" ${a}/>`,
+ a=>`<path d="M112 30 C118 52 168 96 166 132 a66 66 0 1 1 -132 1 C34 96 82 52 94 42 C100 34 105 30 112 30 Z" ${a}/>`,
+];
+const STAR_D="M0.0 -14.0 C1.5 -14.0 2.3 -7.8 4.5 -6.2 C6.7 -4.6 12.8 -5.8 13.3 -4.3 C13.8 -2.9 8.2 -0.2 7.3 2.4 C6.5 5.0 9.4 10.4 8.2 11.3 C7.0 12.2 2.7 7.7 0.0 7.7 C-2.7 7.7 -7.0 12.2 -8.2 11.3 C-9.4 10.4 -6.5 5.0 -7.3 2.4 C-8.2 -0.2 -13.8 -2.9 -13.3 -4.3 C-12.8 -5.8 -6.7 -4.6 -4.5 -6.2 C-2.3 -7.8 -1.5 -14.0 0.0 -14.0 Z";
+const TIPS=[
+ (tx,ty)=>`<circle cx="${tx}" cy="${ty}" r="10" fill="${INK}"/>`,
+ (tx,ty,side)=>`<g transform="translate(${tx} ${ty}) rotate(${side<0?-18:18})"><path d="${STAR_D}" fill="${TIP_COLORS[1]}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></g>`,
+ (tx,ty,side)=>`<g transform="translate(${tx} ${ty}) rotate(${side<0?-22:22})"><path d="M0 2 C -13 2 -13 -8.8 0 -16 C 13 -8.8 13 2 0 2 Z" fill="${TIP_COLORS[2]}" stroke="${INK}" stroke-width="2"/><line x1="0" y1="0" x2="0" y2="-13" stroke="${INK}" stroke-width="1.1" opacity="0.6"/></g>`,
+];
+const ANTENNA_BASE=[{y:50,lx:76},{y:48,lx:74},{y:74,lx:80}];
+const antennaeSvg=(si,ti)=>{const b=ANTENNA_BASE[si];return [-1,1].map(side=>{const bx=side<0?b.lx:200-b.lx;const tx=side<0?bx-17:bx+17;const ty=b.y-40;return `<line x1="${bx}" y1="${b.y}" x2="${tx}" y2="${ty}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`+TIPS[ti](tx,ty,side);}).join("");};
+const eyesSvg=n=>Array.from({length:n},(_,i)=>100+(i-(n-1)/2)*44).map(x=>`<circle cx="${x}" cy="105" r="19" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="${x+1}" cy="108" r="11" fill="${INK}"/><circle cx="${x-5}" cy="98" r="4.3" fill="#fff"/><circle cx="${x+6}" cy="113" r="1.9" fill="#fff" opacity="0.85"/>`).join("");
+const MOUTHS={
+ rest:`<path d="M84 148 Q100 172 116 148 Z" fill="${INK}"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>`,
+ happy:`<path d="M76 144 Q100 182 124 144 Z" fill="${INK}"/><path d="M93 144 L103 144 L98 158 Z" fill="#fff"/>`,
+};
+let uidc=0;
+const renderBlorb=(card,expr="rest")=>{const [ci,ei,si,ti]=card;const uid="m"+(uidc++);const el=SHAPES[si];
+ return `<svg viewBox="0 -10 200 224" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`+
+ `<defs><clipPath id="bclip-${uid}">${el("")}</clipPath><linearGradient id="bshade-${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.10"/></linearGradient></defs>`+
+ `<ellipse cx="100" cy="206" rx="50" ry="7" fill="${INK}" opacity="0.15"/>`+antennaeSvg(si,ti)+el(`fill="${COLORS[ci]}"`)+
+ `<g clip-path="url(#bclip-${uid})">${el(`fill="url(#bshade-${uid})"`)}</g>`+el(`fill="none" stroke="${INK}" stroke-width="4.5"`)+
+ eyesSvg(ei+1)+MOUTHS[expr]+`</svg>`;};
+
+// face-down card back: pale body silhouette, no face
+const cardBack=(si)=>`<svg viewBox="0 0 200 214" style="width:100%;height:auto;display:block">${SHAPES[si%3](`fill="#e7dfd3"`)}</svg>`;
+
+// ---- sample boards ----
+const BOARD12=[[2,2,2,0],[1,1,1,2],[0,2,2,2],[0,2,0,2],[1,0,2,0],[0,2,2,1],[2,1,2,0],[2,0,0,1],[1,1,1,0],[0,1,1,1],[0,0,2,0],[2,1,0,1]];
+const MINIS=[[0,1,0,1],[1,0,1,2],[2,1,2,1]];
+
+// ---- top bar builders ----
+const qchip=`<div class="qchip">?</div>`;
+const segFull=(t1,t2,active,tick1)=>`<div class="seg full"><div class="opt ${active===0?"active":""}">${t1}${tick1?'<span class="tick">✓</span>':""}</div><div class="opt ${active===1?"active":""}">${t2}</div></div>`;
+const barT1=(date,timer,active,tick1)=>`<div class="hdr1"><h1 class="wordmark">Blorble</h1><div class="hdrright">${date}${timer?` <span class="timer">${timer}</span>`:""}${qchip}</div></div>${segFull("Blorblet","Blorble",active,tick1)}`;
+const barT2=(date,timer,active,tick1)=>`<div class="hdr1"><span class="logoblorb">${renderBlorb([0,1,0,0],"happy")}</span><div class="seg compact"><div class="opt ${active===0?"active":""}">Blorblet${tick1?'<span class="tick">✓</span>':""}</div><div class="opt ${active===1?"active":""}">Blorble</div></div><div class="hdrright">${timer?`<span class="timer">${timer}</span>`:`<span>${date}</span>`}${qchip}</div></div>`;
+
+// ---- board builders ----
+const boardBacks=()=>`<div class="board">${BOARD12.map((c,i)=>`<div class="bcard back">${cardBack(i)}</div>`).join("")}</div>`;
+const boardReal=()=>`<div class="board">${BOARD12.map(c=>`<div class="bcard">${renderBlorb(c)}</div>`).join("")}</div>`;
+const boardRealBlurred=()=>`<div class="board blurred">${BOARD12.map(c=>`<div class="bcard">${renderBlorb(c)}</div>`).join("")}</div>`;
+const curtain=(mode,meta)=>`<div class="curtain"><div class="curtaincard"><div class="mascot">${renderBlorb([0,1,2,0],"happy")}</div><h3>${mode}</h3><div class="meta">${meta}</div><button class="playbtn">Play</button><br/><span class="practicelink">practice instead</span></div></div>`;
+const foundEmpty=`<div class="found">${Array(6).fill('<div class="slot"></div>').join("")}</div>`;
+const foundSome=`<div class="found">${['<div class="slot filled">'+MINIS.map(c=>`<span class="mini">${renderBlorb(c)}</span>`).join("")+"</div>",'<div class="slot filled">'+MINIS.map(c=>`<span class="mini">${renderBlorb([c[0],2-c[1],c[2],c[3]])}</span>`).join("")+"</div>"].join("")+Array(4).fill('<div class="slot"></div>').join("")}</div>`;
+const hintrow=`<div class="hintrow"><div class="hintpill">💡 Hint</div></div>`;
+
+const phone=(inner,cap,sub,short)=>`<div class="framewrap"><div class="phone${short?" short":""}"><div class="app">${inner}</div></div><div class="framecap">${cap}<span class="sub">${sub||""}</span></div></div>`;
+
+// ---- assemble ----
+let html="";
+
+html+=`<h2 class="rowtitle">Row 1 — Fresh daily: top bar × curtain <span class="sub">(F1-F3; board face-down or veiled until Play)</span></h2><div class="frames">`;
+html+=phone(barT1("Jul 3","",1,true)+`<div class="stage">${boardBacks()}${curtain("Blorble","12 Blorbs · 6 Sets")}</div>${hintrow}${foundEmpty}`,"F1 — Stacked bar + face-down backs","wordmark row + full-width toggle; silhouette card backs");
+html+=phone(barT2("Jul 3","",1,true)+`<div class="stage">${boardBacks()}${curtain("Blorble","12 Blorbs · 6 Sets")}</div>${hintrow}${foundEmpty}`,"F2 — One-row bar + face-down backs","mascot-as-logo, inline compact toggle");
+html+=phone(barT1("Jul 3","",1,true)+`<div class="stage">${boardRealBlurred()}${curtain("Blorble","12 Blorbs · 6 Sets")}</div>${hintrow}${foundEmpty}`,"F3 — Stacked bar + veiled board","real board blurred under the curtain");
+html+=`</div>`;
+
+html+=`<h2 class="rowtitle">Row 2 — Playing &amp; done states <span class="sub">(F4-F5; stacked bar shown — swap if F2 wins)</span></h2><div class="frames">`;
+html+=phone(barT1("Jul 3","1:23",1,true)+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"F4 — Mid-game","timer joins the top row; Blorblet already done ✓");
+html+=phone(barT1("Jul 3","",1,true)+`<div class="stage">${boardReal()}</div><div class="resultsrow"><b>6/6 · 4:51</b><button class="resultsbtn">Results</button></div>${foundSome}`,"F5 — Done state","board revealed; results row instead of hint");
+html+=`</div>`;
+
+html+=`<h2 class="rowtitle">Row 3 — Results dialog variants <span class="sub">(F6-F7; one primary + copy-text link, no save button)</span></h2><div class="frames">`;
+html+=phone(barT1("Jul 3","",1,true)+`<div class="stage">${boardReal()}</div>`+`<div class="dim"><div class="rdlg"><div class="rclose">×</div><div class="rtop"><span class="rmascot">${renderBlorb([0,1,2,0],"happy")}</span><span class="bubble">not a single grump.</span></div><div class="rtime">4:51</div><p class="rmarks">no hints, <span class="em">no misses</span></p><p class="rctx">Blorble · Jul 3</p><div class="rbtns"><button class="rprimary">Copy image</button><span class="rlink">copy text</span></div></div></div>`,"F6 — Tightened","current structure, even rhythm, soft ×, ink marks line","short");
+html+=phone(barT1("Jul 3","",1,true)+`<div class="stage">${boardReal()}</div>`+`<div class="dim"><div class="rdlg r2"><div class="rclose">×</div><div><span class="bubble2">not a single grump.</span></div><div class="rmascot">${renderBlorb([0,1,2,0],"happy")}</div><div class="rtime">4:51</div><p class="rmarks">no hints, <span class="em">no misses</span></p><p class="rctx">Blorble · Jul 3</p><div class="rurl">doogielampie.github.io/blorble</div><div class="rbtns"><button class="rprimary">Copy image</button><span class="rlink">copy text</span></div></div></div>`,"F7 — Share-card mirror","bubble above mascot, mirrors the PNG layout exactly","short");
+html+=`</div>`;
+
+// ---- R1: timer placement variants (on the approved F1 stacked bar, mid-game) ----
+const barG1=(date,timer,active,tick1)=>`<div class="hdr1 centered3"><h1 class="wordmark">Blorble</h1><span class="timer big">${timer}</span><div class="hdrright">${date}${qchip}</div></div>${segFull("Blorblet","Blorble",active,tick1)}`;
+const segFullTime=(t1,t2,active,tick1,timer)=>`<div class="seg full"><div class="opt ${active===0?"active":""}">${t1}${tick1?'<span class="tick">✓</span>':""}</div><div class="opt ${active===1?"active":""}">${t2}<span class="segtime">${timer}</span></div></div>`;
+const barG2=(date,timer,active,tick1)=>`<div class="hdr1"><h1 class="wordmark">Blorble</h1><div class="hdrright">${date}${qchip}</div></div>${segFullTime("Blorblet","Blorble",active,tick1,timer)}`;
+const barG3=(date,timer,active,tick1)=>`<div class="hdr1"><h1 class="wordmark">Blorble</h1><div class="hdrright">${date}${qchip}</div></div>${segFull("Blorblet","Blorble",active,tick1)}<div class="timerpillrow"><div class="timerpill">⏱ ${timer}</div></div>`;
+
+html+=`<h2 class="rowtitle">Row 5 — R1: timer placement (mid-game, F1 bar) <span class="sub">(G1 centered row 1 · G2 inside active toggle segment · G3 pill under toggle)</span></h2><div class="frames">`;
+html+=phone(barG1("Jul 3","1:23",1,true)+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"G1 — Centered in the top row","Blorble · 1:23 · Jul 3 ? — true center via grid");
+html+=phone(barG2("Jul 3","1:23",1,true)+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"G2 — Inside the active segment","the mode that's running carries its own clock");
+html+=phone(barG3("Jul 3","1:23",1,true)+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"G3 — Stopwatch pill under the toggle","dedicated line; costs ~30px of board height");
+html+=`</div>`;
+
+html+=`<h2 class="rowtitle">Row 4 — How-to legend spacing fix <span class="sub">(before 64px label column / after 82px + gap)</span></h2><div class="frames">`;
+const legendRow=(lab)=>`<span class="lab">${lab}</span><div class="row3">${[[0,1,0,0],[0,1,0,1],[0,1,0,2]].map(c=>`<span>${renderBlorb(c)}</span>`).join("")}</div>`;
+html+=`<div class="framewrap"><div class="legendbox"><div class="legend before">${legendRow("Antennae")}</div></div><div class="framecap">Before — 64px column<span class="sub">label crowds the examples</span></div></div>`;
+html+=`<div class="framewrap"><div class="legendbox"><div class="legend after">${legendRow("Antennae")}</div></div><div class="framecap">After — 82px + 8px gap<span class="sub">clear separation</span></div></div>`;
+html+=`</div>`;
+
+// ---- R2: LOCK SHEET — every chosen piece assembled (F1 bar · G1 timer · backs curtain · F5 done · F6 dialog) ----
+const barG1v=(date,timer,active,tick1)=>`<div class="hdr1 centered3"><h1 class="wordmark">Blorble</h1><span class="timer big">${timer}</span><div class="hdrright">${date}${qchip}</div></div>${segFull("Blorblet","Blorble",active,tick1)}`;
+html+=`<h2 class="rowtitle">Row 6 — R2 lock sheet: the assembled design <span class="sub">(L1 fresh · L2 playing · L3 done · L4 results · L5 375×667 fit)</span></h2><div class="frames">`;
+html+=phone(barG1v("Jul 3","",1,true)+`<div class="stage">${boardBacks()}${curtain("Blorble","12 Blorbs · 6 Sets")}</div>${hintrow}${foundEmpty}`,"L1 — Fresh daily","timer slot empty until Play lifts the curtain");
+html+=phone(barG1v("Jul 3","1:23",1,true)+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"L2 — Playing","G1: clock centered between wordmark and date");
+html+=phone(barG1v("Jul 3","4:51",1,true)+`<div class="stage">${boardReal()}</div><div class="resultsrow"><b>6/6 ✓</b><button class="resultsbtn">Results</button></div>${foundSome}`,"L3 — Done","final time stays in the bar; results row drops the duplicate time");
+html+=phone(barG1v("Jul 3","4:51",1,true)+`<div class="stage">${boardReal()}</div>`+`<div class="dim"><div class="rdlg"><div class="rclose">×</div><div class="rtop"><span class="rmascot">${renderBlorb([0,1,2,0],"happy")}</span><span class="bubble">not a single grump.</span></div><div class="rtime">4:51</div><p class="rmarks">no hints, <span class="em">no misses</span></p><p class="rctx">Blorble · Jul 3</p><div class="rbtns"><button class="rprimary">Copy image</button><span class="rlink">copy text</span></div></div></div>`,"L4 — Results (F6)","one primary + copy-text link, soft ×");
+html+=`<div class="framewrap"><div class="phone n375"><div class="app">${barG1v("Jul 3","1:23",1,true)}<div class="stage">${boardReal()}</div>${hintrow}${foundSome}</div></div><div class="framecap">L5 — 375×667 fit check<span class="sub">smallest supported phone</span></div></div>`;
+html+=`</div>`;
+
+// ---- R3: practice flow states ----
+const practiceChip=`<div style="display:flex;align-items:center;gap:5px;background:var(--tile);border:1.5px solid var(--ink);border-radius:999px;padding:4px 10px;font-size:12.5px;font-weight:700;">practice <span style="color:var(--muted);font-size:14px;line-height:1;">×</span></div>`;
+const segNone=(t1,t2,tick1)=>`<div class="seg full"><div class="opt">${t1}${tick1?'<span class="tick">✓</span>':""}</div><div class="opt">${t2}</div></div>`;
+const barPractice=(timer)=>`<div class="hdr1 centered3"><h1 class="wordmark">Blorble</h1><span class="timer big">${timer}</span><div class="hdrright">${practiceChip}${qchip}</div></div>${segNone("Blorblet","Blorble",true)}`;
+html+=`<h2 class="rowtitle">Row 7 — R3: practice flow <span class="sub">(P1 done state gains a quiet practice link · P2 in-practice: chip replaces date, toggle un-highlighted)</span></h2><div class="frames">`;
+html+=phone(barG1v("Jul 3","4:51",1,true)+`<div class="stage">${boardReal()}</div><div class="resultsrow"><b>6/6 ✓</b><button class="resultsbtn">Results</button><span class="practicelink" style="margin-top:0">practice</span></div>${foundSome}`,"P1 — Done + practice link","Results stays primary; practice is the quiet option beside it");
+html+=phone(barPractice("0:37")+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"P2 — In practice","tap the × chip or either toggle segment to return to the daily");
+html+=`</div>`;
+
+// ---- R4: P2 alternatives + practice results dialog ----
+const segThree=(active2)=>`<div class="seg full"><div class="opt">Blorblet<span class="tick">✓</span></div><div class="opt">Blorble</div><div class="opt ${active2?"active":""}">Practice</div></div>`;
+const banner=`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--tile);border-radius:10px;padding:5px 12px;font-size:12.5px;"><b>Practice board</b><span style="color:var(--muted);text-decoration:underline;font-weight:600;">back to daily →</span></div>`;
+const barP2b=(timer)=>`<div class="hdr1 centered3"><h1 class="wordmark">Blorble</h1><span class="timer big">${timer}</span><div class="hdrright"><span>Jul 3</span>${qchip}</div></div>${segNone("Blorblet","Blorble",true)}${banner}`;
+const barP2c=(timer)=>`<div class="hdr1 centered3"><h1 class="wordmark">Blorble</h1><span class="timer big">${timer}</span><div class="hdrright"><span>Jul 3</span>${qchip}</div></div>${segThree(true)}`;
+const barP2d=(timer)=>`<div class="hdr1 centered3"><h1 class="wordmark">Blorble</h1><span class="timer big">${timer}</span><div class="hdrright"><span>practice</span>${qchip}</div></div>${segNone("Blorblet","Blorble",true)}`;
+html+=`<h2 class="rowtitle">Row 8 — R4: in-practice alternatives + practice results <span class="sub">(P2b banner · P2c third segment · P2d minimal · P3 practice dialog)</span></h2><div class="frames">`;
+html+=phone(barP2b("0:37")+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"P2b — Banner under toggle","explicit labeled exit; costs ~30px");
+html+=phone(barP2c("0:37")+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"P2c — Practice appears as a third segment","exists only while practicing; exit = tap a daily tab");
+html+=phone(barP2d("0:37")+`<div class="stage">${boardReal()}</div>${hintrow}${foundSome}`,"P2d — Minimal word","'practice' in the date slot; exit = toggle only, no widget");
+html+=phone(barP2d("0:58")+`<div class="stage">${boardReal()}</div>`+`<div class="dim"><div class="rdlg"><div class="rclose">×</div><div class="rtop"><span class="rmascot">${renderBlorb([1,1,1,0],"happy")}</span><span class="bubble">zoomy little fingers.</span></div><div class="rtime">0:58</div><p class="rmarks">no hints, <span class="em">no misses</span></p><p class="rctx">Practice · Blorble</p><div class="rbtns"><button class="rprimary">New board</button><span class="rlink">copy image</span></div></div></div>`,"P3 — Practice results","primary = New board (the grind loop); copy demoted or cut","short");
+html+=`</div>`;
+
+document.getElementById("app").innerHTML=html;
+</script>
+</body>
+</html>
