@@ -65,15 +65,15 @@ export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob
       ctx.textAlign = "center";
       ctx.fillText(q, bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 12);
 
-      // mascot, below the bubble, aspect-correct (source SVG is 200×214) so
+      // mascot, below the bubble, aspect-correct (source SVG is 200×224) so
       // antennae aren't squashed — drawn after the bubble so its bottom edge
       // (bubbleY + bubbleH = 150) never covers them, with a clear gap below it.
       const mascotW = 320;
-      const mascotH = Math.round((mascotW * 214) / 200); // 342
+      const mascotH = Math.round((mascotW * 224) / 200); // 358
       const mascotX = (800 - mascotW) / 2;
       const mascotY = bubbleY + bubbleH + 20; // 170 — ≥20px clear of the bubble
       ctx.drawImage(img, mascotX, mascotY, mascotW, mascotH);
-      const mascotBottom = mascotY + mascotH; // 512
+      const mascotBottom = mascotY + mascotH; // 528
 
       // huge time
       ctx.fillStyle = "#2a2320";
@@ -102,6 +102,6 @@ export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob
     img.onerror = () => reject(new Error("blorb image failed"));
     // SVGs without intrinsic width/height are a known canvas failure mode
     // outside Chrome — inject explicit dimensions before encoding.
-    const sized = blorbSvg.replace("<svg ", '<svg width="200" height="214" ');
+    const sized = blorbSvg.replace("<svg ", '<svg width="200" height="224" ');
     img.src = "data:image/svg+xml," + encodeURIComponent(sized);
   });
