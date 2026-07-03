@@ -49,69 +49,46 @@ export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob
     ctx.fillRect(0, 0, 800, 1000);
     const img = new Image();
     img.onload = () => {
-      // speech bubble first, top-center, flattened bottom-left corner
-      const marksLine = info.hints === 0 && info.wrongs === 0
-        ? "no hints, no misses"
-        : [info.hints > 0 ? `💡${info.hints}` : "", info.wrongs > 0 ? `✖️${info.wrongs}` : ""].filter(Boolean).join(" ");
-      const contextLine = info.practice ? `Practice · ${info.label}` : `${info.label} · ${formatDate(info.isoDate)}`;
-      const q = quip(info);
-      const bubbleX = 40;
-      const bubbleY = 40;
-      const bubbleW = 720;
-      const bubbleH = 110;
-      const r = 22;
-      ctx.fillStyle = "#f4f0ea";
-      ctx.strokeStyle = "#2a2320";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(bubbleX + r, bubbleY);
-      ctx.lineTo(bubbleX + bubbleW - r, bubbleY);
-      ctx.arcTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + r, r);
-      ctx.lineTo(bubbleX + bubbleW, bubbleY + bubbleH - r);
-      ctx.arcTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX + bubbleW - r, bubbleY + bubbleH, r);
-      ctx.lineTo(bubbleX + 2, bubbleY + bubbleH); // flattened bottom-left corner
-      ctx.lineTo(bubbleX, bubbleY + bubbleH - 2);
-      ctx.lineTo(bubbleX, bubbleY + r);
-      ctx.arcTo(bubbleX, bubbleY, bubbleX + r, bubbleY, r);
-      ctx.closePath();
-      ctx.fill();
-      ctx.stroke();
-      ctx.fillStyle = "#2a2320";
-      ctx.font = "600 34px ui-rounded, ui-sans-serif, system-ui";
+      const m = receiptModel(info);
+      const cx = 400;
+      const mono = (px: number, weight = "400") => `${weight} ${px}px "SF Mono", Menlo, Consolas, monospace`;
+      const rule = (y: number) => {
+        ctx.strokeStyle = "#c9c0b2"; ctx.lineWidth = 3; ctx.setLineDash([10, 8]);
+        ctx.beginPath(); ctx.moveTo(120, y); ctx.lineTo(680, y); ctx.stroke(); ctx.setLineDash([]);
+      };
+      // mascot logo (aspect-correct 200×224), centred at top
+      const lw = 150, lh = Math.round((lw * 224) / 200);
+      ctx.drawImage(img, cx - lw / 2, 44, lw, lh);
+      // title + size
+      ctx.fillStyle = "#2a2320"; ctx.textAlign = "center";
+      ctx.font = mono(64, "800"); ctx.fillText(m.title, cx, 320);
+      ctx.font = mono(28); ctx.fillStyle = "#8a7d74"; ctx.fillText(m.size, cx, 360);
+      rule(398);
+      // itemised rows: label left, value right
+      ctx.fillStyle = "#2a2320"; ctx.font = mono(30);
+      let y = 452;
+      for (const r of m.rows) {
+        ctx.textAlign = "left"; ctx.fillText(r.label, 140, y);
+        ctx.textAlign = "right"; ctx.fillText(r.value, 660, y);
+        y += 46;
+      }
+      rule(y - 8);
+      // TIME (bold)
+      ctx.font = mono(44, "700"); const ty = y + 44;
+      ctx.textAlign = "left"; ctx.fillText("TIME", 140, ty);
+      ctx.textAlign = "right"; ctx.fillText(m.time, 660, ty);
+      rule(ty + 34);
+      // quip + note
       ctx.textAlign = "center";
-      ctx.fillText(q, bubbleX + bubbleW / 2, bubbleY + bubbleH / 2 + 12);
-
-      // mascot, below the bubble, aspect-correct (source SVG is 200×224) so
-      // antennae aren't squashed — drawn after the bubble so its bottom edge
-      // (bubbleY + bubbleH = 150) never covers them, with a clear gap below it.
-      const mascotW = 320;
-      const mascotH = Math.round((mascotW * 224) / 200); // 358
-      const mascotX = (800 - mascotW) / 2;
-      const mascotY = bubbleY + bubbleH + 20; // 170 — ≥20px clear of the bubble
-      ctx.drawImage(img, mascotX, mascotY, mascotW, mascotH);
-      const mascotBottom = mascotY + mascotH; // 528
-
-      // huge time
-      ctx.fillStyle = "#2a2320";
-      ctx.font = "700 120px ui-rounded, ui-sans-serif, system-ui";
-      ctx.textAlign = "center";
-      ctx.fillText(formatTime(info.elapsedMs), 400, mascotBottom + 80);
-
-      // marks line
-      ctx.font = "600 42px ui-rounded, ui-sans-serif, system-ui";
-      ctx.fillStyle = "#1f97f0";
-      ctx.fillText(marksLine, 400, mascotBottom + 150);
-
-      // context line
-      ctx.font = "500 34px ui-rounded, ui-sans-serif, system-ui";
-      ctx.fillStyle = "#8a7d74";
-      ctx.fillText(contextLine, 400, mascotBottom + 210);
-
-      // URL footer
-      ctx.font = "500 26px ui-rounded, ui-sans-serif, system-ui";
-      ctx.fillStyle = "#8a7d74";
-      ctx.fillText("doogielampie.github.io/blorble", 400, 950);
-
+      ctx.font = mono(28, "700"); ctx.fillStyle = "#2a2320"; ctx.fillText(`* ${m.quip} *`, cx, ty + 92);
+      ctx.font = mono(26); ctx.fillStyle = "#5f544b"; ctx.fillText(m.note, cx, ty + 132);
+      // barcode (bars of deterministic-but-varied width — stable per result)
+      const bx0 = 240, bw = 320, by = ty + 168; ctx.fillStyle = "#2a2320";
+      let bx = bx0; let seed = m.title.length + m.time.length;
+      while (bx < bx0 + bw) { const w = 2 + (seed % 3); ctx.fillRect(bx, by, w, 44); bx += w + 2 + (seed % 2); seed = (seed * 7 + 3) % 97; }
+      // footer
+      ctx.font = mono(24); ctx.fillStyle = "#8a7d74"; ctx.textAlign = "center";
+      ctx.fillText(`${m.date} · ${m.url}`, cx, by + 96);
       ctx.textAlign = "left";
       canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("toBlob failed"))), "image/png");
     };
