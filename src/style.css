@@ -120,7 +120,9 @@ dialog {
   position: absolute; top: 8px; right: 12px; width: 28px; height: 28px;
   border: none; background: none;
   color: var(--muted); cursor: pointer; outline: none;
-  /* showModal autofocuses this button — suppress the default blue focus ring */
+  /* blurAutofocus() (main.ts) is the primary defense against the showModal
+     autofocus ring; this outline:none is a backstop. :focus-visible below
+     restores the ring for keyboard users. */
 }
 .dialog-x:hover, .dialog-x:focus, .dialog-x:active {
   color: var(--muted); outline: none;

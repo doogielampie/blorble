@@ -3,7 +3,7 @@ import { cardBackSvg } from "./back";
 import { renderBlorb, type Expression } from "./blorb";
 import { MODES, type DealtBoard, type PuzzleMode, dailyBoard, practiceBoard } from "./board";
 import { cardLines, quip, renderStatsCard } from "./card";
-import { type GameState, type Hint, hint, tap, trioKey } from "./game";
+import { type GameState, hint, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
 import { type DayProgress, type SavedState, freshDay, load, recordWin, save } from "./state";
