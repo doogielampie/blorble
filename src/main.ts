@@ -85,7 +85,7 @@ const svg = (paths: string, viewBox = "0 0 24 24") =>
   `<svg viewBox="${viewBox}" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
 const bulbIcon = () => svg(`<path d="M12 3a6 6 0 0 0-3.2 11.08c.45.3.7.8.7 1.32V17h5v-1.6c0-.52.25-1.02.7-1.32A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 20h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 22h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`);
 const closeIcon = () =>
-  `<svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
+  `<svg viewBox="0 0 24 24" width="15" height="15"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
 
 // Legend rows render actual Blorbs so a beginner sees each feature, not just reads its name.
 const legendRow = (label: string, uidPrefix: string, cards: readonly [number, number, number, number][]) => `
@@ -148,13 +148,15 @@ const shell = () => {
   el("btn-help").addEventListener("click", openHowTo);
   el("howto").querySelector(".dialog-x")?.addEventListener("click", () => (el("howto") as HTMLDialogElement).close());
   el("result").querySelector(".dialog-x")?.addEventListener("click", () => (el("result") as HTMLDialogElement).close());
-  el("btn-copy-text").addEventListener("click", () => void onCopyText());
-  el("btn-copy-image").addEventListener("click", () => void onCopyImage());
-  el("btn-save-image").addEventListener("click", onSaveImage);
-  const again = document.getElementById("btn-again");
-  again?.addEventListener("click", () => {
-    (el("result") as HTMLDialogElement).close();
-    showGame(session.mode, true);
+  el("btn-r-primary").addEventListener("click", () => {
+    if (session.practice) { // P3: New board — deal a fresh practice board
+      (el("result") as HTMLDialogElement).close();
+      showGame(session.mode, true);
+    } else void onCopyImage(el("btn-r-primary")); // F6: Copy image
+  });
+  el("btn-r-link").addEventListener("click", () => {
+    if (session.practice) void onCopyImage(el("btn-r-link")); // P3: demoted copy image
+    else void onCopyText(el("btn-r-link"));                   // F6: copy text
   });
   const icon = document.createElement("link");
   icon.rel = "icon";
@@ -404,16 +406,17 @@ const renderResultBar = () => {
   el("btn-practice").addEventListener("click", () => showGame(session.mode, true));
 };
 
+// One primary + one quiet link (locked F6/P3). Labels and roles are assigned
+// per session in openResult: daily = Copy image / copy text; practice =
+// New board / copy image.
 const resultDialogHtml = () => `
   <dialog id="result">
     <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
     <div id="result-body"></div>
     <div class="result-buttons">
-      <button id="btn-copy-image" class="primary" disabled>Copy image</button>
-      <button id="btn-copy-text" class="chip">Copy text</button>
+      <button id="btn-r-primary" class="primary"></button>
+      <button id="btn-r-link" class="linkish"></button>
     </div>
-    <button id="btn-save-image" class="linkish">save image instead</button>
-    <button id="btn-again" class="chip" hidden>New board</button>
   </dialog>`;
 
 const shareInfo = () => ({
@@ -425,45 +428,57 @@ const openResult = async () => {
   const gen = ++openResultGen;
   statsBlob = null;
   if (statsUrl) { URL.revokeObjectURL(statsUrl); statsUrl = null; }
-  (el("btn-copy-image") as HTMLButtonElement).disabled = true;
-  (el("btn-save-image") as HTMLButtonElement).disabled = true;
-  el("btn-save-image").classList.add("is-disabled");
+  const primary = el("btn-r-primary") as HTMLButtonElement;
+  const link = el("btn-r-link") as HTMLButtonElement;
+  primary.textContent = session.practice ? "New board" : "Copy image";
+  link.textContent = session.practice ? "copy image" : "copy text";
+  // whichever control copies the PNG stays dead until the blob is ready
+  const img = session.practice ? link : primary;
+  const other = session.practice ? primary : link;
+  img.disabled = true;
+  img.classList.add("is-disabled");
+  other.disabled = false;
+  other.classList.remove("is-disabled");
   const info = shareInfo();
-  const [marksLine, contextLine] = cardLines(info);
+  const [marksLine = "", contextLine = ""] = cardLines(info);
   el("result-body").innerHTML =
     `<div class="r-top">` +
       `<div class="r-mascot">${renderBlorb(session.deal.cards[0]!, "mascot", "happy")}</div>` +
       `<div class="bubble">${quip(info)}</div>` +
     `</div>` +
     `<p class="r-time">${formatTime(session.elapsedMs!)}</p>` +
-    `<p class="r-marks">${marksLine}</p>` +
+    // accent only on the emphasis (F6); emoji marks lines pass through unchanged
+    `<p class="r-marks">${marksLine.replace("no misses", '<span class="em">no misses</span>')}</p>` +
     `<p class="r-ctx mut">${contextLine}</p>`;
-  (el("btn-again") as HTMLButtonElement).hidden = !session.practice;
   (el("result") as HTMLDialogElement).showModal();
   try {
     const blob = await renderStatsCard(info, renderBlorb(session.deal.cards[0]!, "mascot", "happy"));
     if (gen !== openResultGen) return; // a newer open owns the dialog
     statsBlob = blob;
     statsUrl = URL.createObjectURL(statsBlob);
-    (el("btn-copy-image") as HTMLButtonElement).disabled = false;
-    (el("btn-save-image") as HTMLButtonElement).disabled = false;
-    el("btn-save-image").classList.remove("is-disabled");
-  } catch { /* canvas unavailable — text sharing still works, image controls stay disabled */ }
+    img.disabled = false;
+    img.classList.remove("is-disabled");
+  } catch { /* canvas unavailable — the image control stays disabled */ }
 };
 
-const onCopyText = async () => {
+// Restores an explicit resting label (NOT the captured one — capturing would
+// stick "Copied!" forever if the button is clicked twice within the window).
+const flashLabel = (btn: HTMLElement, msg: string, resting: string) => {
+  btn.textContent = msg;
+  window.setTimeout(() => (btn.textContent = resting), 1500);
+};
+
+const onCopyText = async (btn: HTMLElement) => {
   const text = shareText(shareInfo());
-  const btn = el("btn-copy-text");
   try {
     await navigator.clipboard.writeText(text);
-    btn.textContent = "Copied!";
-    window.setTimeout(() => (btn.textContent = "Copy text"), 1500);
+    flashLabel(btn, "Copied!", "copy text"); // only ever the daily link
   } catch {
     window.prompt("Copy your result:", text);
   }
 };
 
-const onCopyImage = async () => {
+const onCopyImage = async (btn: HTMLElement) => {
   if (!statsBlob) return;
   const file = new File([statsBlob], `blorble-${DATE_ISO}.png`, { type: "image/png" });
   if (navigator.canShare?.({ files: [file] })) {
@@ -472,17 +487,15 @@ const onCopyImage = async () => {
       if ((e as DOMException).name === "AbortError") return; // user cancelled the share sheet
     }
   }
-  const btn = el("btn-copy-image");
   try {
     await navigator.clipboard.write([new ClipboardItem({ "image/png": statsBlob })]);
-    btn.textContent = "Copied!";
-    window.setTimeout(() => (btn.textContent = "Copy image"), 1500);
+    flashLabel(btn, "Copied!", session.practice ? "copy image" : "Copy image");
   } catch {
-    onSaveImage(); // clipboard-image unsupported → download instead
+    saveImage(); // clipboard-image unsupported → PNG download (F6: no visible save button)
   }
 };
 
-const onSaveImage = () => {
+const saveImage = () => {
   if (!statsUrl) return;
   const a = document.createElement("a");
   a.href = statsUrl;
