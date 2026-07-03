@@ -6,7 +6,9 @@ hiding exactly 6 Sets). Trios where each feature (colour, eye count, shape, ante
 is either the same on all three Blorbs or different on all three. Find them all, race
 the clock, and share your time. New board at midnight UTC; unlimited practice boards included.
 
-Pick your level from the landing screen — each card tracks whether you've finished today's board.
+The board is the home screen — a toggle up top switches between the two dailies (✓ marks
+the ones you've finished), and a fresh board waits face-down behind a Play curtain so the
+clock only starts when you do. Practice boards live one quiet link away.
 
 **Play: https://doogielampie.github.io/blorble/**
 
