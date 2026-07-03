@@ -115,7 +115,7 @@ dialog {
 #result { max-height: 86dvh; overflow-y: auto; }
 /* how-to can overflow on short phones; the × must stay pinned to the dialog
    (not scroll away with the content), so only the content wrapper scrolls */
-.dialog-scroll { max-height: 80dvh; overflow-y: auto; }
+.dialog-scroll { max-height: 80dvh; overflow-y: auto; outline: none; /* keyboard/headless focus on the scroll container reads as a stray box */ }
 .dialog-x {
   position: absolute; top: 8px; right: 12px; width: 28px; height: 28px;
   border: none; background: none;
@@ -134,7 +134,7 @@ dialog p { font-size: 14px; line-height: 1.32; margin: 5px 0; }
 .example { display: flex; gap: 6px; }
 .example > span { flex: 1; background: var(--tile); border-radius: 10px; padding: 4px; }
 .caption { color: var(--muted); font-size: 12.5px; }
-.legend { display: grid; grid-template-columns: 64px 1fr; gap: 4px; align-items: center; }
+.legend { display: grid; grid-template-columns: 82px 1fr; gap: 6px 8px; align-items: center; } /* locked: 82px labels + 8px column gap */
 .legend .row3 { display: flex; gap: 4px; }
 .legend .row3 > span { flex: 1; max-width: 52px; }
 .fineprint { color: var(--muted); font-size: 10px; text-align: center; margin: 7px 0 0; line-height: 1.25; }
