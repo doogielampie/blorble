@@ -1,7 +1,7 @@
 {
   "name": "blorble",
   "private": true,
-  "version": "0.1.0",
+  "version": "2.3.0",
   "description": "A daily monster-matching puzzle — find all 6 Sets of Blorbs and race the clock",
   "license": "MIT",
   "packageManager": "pnpm@9.15.9",
