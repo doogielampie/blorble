@@ -43,8 +43,8 @@ describe("cardLines", () => {
     expect(cardLines({ label: "Blorble", isoDate: "2026-07-05", elapsedMs: 90_000, hints: 0, wrongs: 3 }))
       .toEqual(["✖️3", "Blorble · Jul 5"]);
   });
-  test("practice: context line has no date", () => {
+  test("practice: context line reads Practice · mode, no date", () => {
     expect(cardLines({ label: "Blorblet", isoDate: "2026-07-02", elapsedMs: 61_000, hints: 0, wrongs: 0, practice: true }))
-      .toEqual(["no hints, no misses", "Blorblet · practice"]);
+      .toEqual(["no hints, no misses", "Practice · Blorblet"]);
   });
 });

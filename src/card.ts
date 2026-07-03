@@ -19,7 +19,10 @@ export const cardLines = (info: ShareInfo): string[] => {
   const marksLine = info.hints === 0 && info.wrongs === 0
     ? "no hints, no misses"
     : [info.hints > 0 ? `💡${info.hints}` : "", info.wrongs > 0 ? `✖️${info.wrongs}` : ""].filter(Boolean).join(" ");
-  const contextLine = `${info.label} · ${info.practice ? "practice" : formatDate(info.isoDate)}`;
+  // Daily: "Blorble · Jul 3" (F6). Practice: "Practice · Blorble" (P3) — the
+  // stats-card PNG mirrors the dialog. shareText (the copy-text format) is
+  // untouched and still reads "Blorble · practice · …".
+  const contextLine = info.practice ? `Practice · ${info.label}` : `${info.label} · ${formatDate(info.isoDate)}`;
   return [marksLine, contextLine];
 };
 
