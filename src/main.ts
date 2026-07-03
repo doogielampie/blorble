@@ -96,12 +96,12 @@ const howtoDialogHtml = () => `
     <dialog id="howto">
       <div class="dialog-scroll">
         <h2>How to play</h2>
-        <p>Every Blorb has 4 features: colour, eyes, shape, and pattern.</p>
+        <p>Every Blorb has 4 features: colour, eyes, shape, and antennae.</p>
         <div class="legend">
           ${legendRow("Colour", "hc", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
           ${legendRow("Eyes", "he", [[0, 0, 0, 0], [0, 1, 0, 0], [0, 2, 0, 0]])}
           ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
-          ${legendRow("Pattern", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
+          ${legendRow("Antennae", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
         </div>
         <p>A Set is 3 Blorbs where each feature is the same on all three, or different on all three.</p>
         <div class="example">${([[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]] as const)

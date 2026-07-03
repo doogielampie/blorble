@@ -1,8 +1,8 @@
 # Blorble 👾
 
-**Blorble** is a free daily pattern-matching puzzle. Every day choose your challenge:
+**Blorble** is a free daily monster-matching puzzle. Every day choose your challenge:
 **Blorblet** (9 Blorbs hiding exactly 4 Sets — the quick one) or **Blorble** (12 Blorbs
-hiding exactly 6 Sets). Trios where each feature (colour, eye count, shape, pattern)
+hiding exactly 6 Sets). Trios where each feature (colour, eye count, shape, antennae)
 is either the same on all three Blorbs or different on all three. Find them all, race
 the clock, and share your time. New board at midnight UTC; unlimited practice boards included.
 
@@ -26,7 +26,7 @@ image so you can post your win.
   for visual review of the card art (rasterize with headless Chrome)
 
 Pure game logic lives in small tested modules (`src/deck.ts`, `board.ts`,
-`game.ts`, …); the canonical Blorb art spec lives in `design/blorble/`.
+`game.ts`, …); the canonical Blorb art spec lives in `design/blorble-v2/ (v1 history in design/blorble/)`.
 
 ---
 

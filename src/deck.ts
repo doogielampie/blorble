@@ -1,4 +1,4 @@
-// A Blorb card: [colour, eyes, shape, pattern], each attribute 0|1|2.
+// A Blorb card: [colour, eyes, shape, antenna], each attribute 0|1|2.
 export type Card = readonly [number, number, number, number];
 
 // All 81 cards in canonical order (matches the reference sheet grid).
