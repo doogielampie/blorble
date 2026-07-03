@@ -1,4 +1,5 @@
 import "./style.css";
+import { cardBackSvg } from "./back";
 import { renderBlorb, type Expression } from "./blorb";
 import { MODES, type DealtBoard, type PuzzleMode, dailyBoard, practiceBoard } from "./board";
 import { cardLines, quip, renderStatsCard } from "./card";
@@ -7,7 +8,7 @@ import { todayIso } from "./seed";
 import { formatDate, formatTime, shareText } from "./share";
 import { type DayProgress, type SavedState, freshDay, load, recordWin, save } from "./state";
 
-// Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the landing.
+// Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the curtain.
 const params = new URLSearchParams(location.search);
 const qdate = params.get("date") ?? "";
 const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/.test(qdate) ? qdate : todayIso();
@@ -15,6 +16,8 @@ const DATE_ISO = /^\d{4}-\d{2}-\d{2}$/.test(qdate) ? qdate : todayIso();
 // A daily tab left open across UTC midnight must not keep serving yesterday's
 // board: re-sync when the player returns to the tab, and guard the moment of
 // reveal. (No mid-play rug-pull — neither fires while actively playing.)
+// The reload also brings the fresh curtains back and resets the toggle ✓s —
+// both derive from `saved.days`, which freshDay() clears for the new date.
 const dateRolled = () => !params.get("date") && todayIso() !== DATE_ISO;
 window.addEventListener("visibilitychange", () => {
   if (document.visibilityState === "visible" && dateRolled()) location.reload();
@@ -33,9 +36,8 @@ type Session = {
 };
 
 const app = document.getElementById("app")!;
-// definite-assignment: a fresh visit reaches showLanding() with session still
-// unassigned (guarded there); every other path runs startSession at boot
-// before any handler can read session.
+// definite-assignment: every boot path runs startSession (via showGame) before
+// any handler can read session.
 let session!: Session;
 
 // Sessions driven by dev/raster params live in a separate storage bucket so a
@@ -81,8 +83,6 @@ const cardEl = (i: number) => stageEl().querySelector(`[data-i="${i}"]`)!;
 // Tiny inline-SVG icon helpers (no icon-font dependency).
 const svg = (paths: string, viewBox = "0 0 24 24") =>
   `<svg viewBox="${viewBox}" width="1em" height="1em" xmlns="http://www.w3.org/2000/svg">${paths}</svg>`;
-const backIcon = () => svg(`<path d="M15 5 L8 12 L15 19" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
-const checkIcon = () => svg(`<path d="M4 12.5 L9.5 18 L20 6" fill="none" stroke="#0f6e56" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>`);
 const bulbIcon = () => svg(`<path d="M12 3a6 6 0 0 0-3.2 11.08c.45.3.7.8.7 1.32V17h5v-1.6c0-.52.25-1.02.7-1.32A6 6 0 0 0 12 3z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9.5 20h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M10 22h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>`);
 const closeIcon = () =>
   `<svg viewBox="0 0 24 24" width="13" height="13"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
@@ -116,58 +116,34 @@ const howtoDialogHtml = () => `
       <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
     </dialog>`;
 
-// Fixed sample trios shown on the landing cards (uids namespaced lc*/ld* so
-// they never collide with in-game `c${i}` or how-to `h*` uids).
-const LANDING_TRIOS: Record<PuzzleMode, { uid: string; cards: readonly [number, number, number, number][] }> = {
-  blorblet: { uid: "lc", cards: [[0, 0, 0, 0], [1, 0, 0, 1], [2, 0, 0, 2]] },
-  blorble: { uid: "ld", cards: [[0, 2, 1, 2], [1, 2, 2, 1], [2, 2, 0, 0]] },
-};
-
-const levelCardHtml = (mode: PuzzleMode) => {
-  const m = MODES[mode];
-  return `
-    <div class="level-card" data-mode="${mode}">
-      <div class="row3" data-art></div>
-      <h2>${m.label}</h2>
-      <span class="mut">${m.size} Blorbs · ${m.targetSets} Sets</span>
-      <div class="level-state" data-state></div>
-    </div>`;
-};
-
 const shell = () => {
   app.innerHTML = `
-    <header id="hdr-landing">
-      <h1>Blorble</h1>
-      <div class="hdr-right">
-        <span id="landing-date" class="mut"></span>
-        <button id="btn-help" class="chip round">?</button>
+    <header id="hdr">
+      <div id="hdr-row1">
+        <h1>Blorble</h1>
+        <b id="timer"></b>
+        <div class="hdr-right">
+          <span class="mut">${formatDate(DATE_ISO)}</span>
+          <button id="btn-help" class="chip round">?</button>
+        </div>
       </div>
+      <nav id="seg"></nav>
     </header>
-    <section id="landing">
-      ${levelCardHtml("blorblet")}
-      ${levelCardHtml("blorble")}
-    </section>
-    <header id="hdr-game" hidden>
-      <button id="btn-back" class="chip round" aria-label="Back">${backIcon()}</button>
-      <span id="hdr-level"></span>
-      <span id="hdr-meta"><span id="hdr-meta-label" class="mut"></span><b id="timer">0:00</b></span>
-    </header>
-    <section id="game" hidden>
+    <section id="game">
       <section id="stage"></section>
       <div id="hint-row"><button id="btn-hint" class="chip" hidden>${bulbIcon()} Hint</button></div>
       <section id="found"></section>
     </section>
     ${howtoDialogHtml()}${resultDialogHtml()}`;
-  el("landing-date").textContent = formatDate(DATE_ISO);
-  for (const card of app.querySelectorAll<HTMLElement>(".level-card"))
-    card.addEventListener("click", (e) => {
-      const t = (e.target as HTMLElement).closest<HTMLElement>("[data-play],[data-practice],[data-results]");
-      if (!t) return;
-      const mode = card.dataset.mode as PuzzleMode;
-      if (t.dataset.results !== undefined) { showGame(mode, false); void openResult(); }
-      else showGame(mode, t.dataset.practice !== undefined);
-    });
-  el("btn-back").addEventListener("click", showLanding);
+  // The toggle ALWAYS navigates to daily boards (never practice). The Practice
+  // segment only exists while practicing and is inert — it marks where you are.
+  el("seg").addEventListener("click", (e) => {
+    const opt = (e.target as HTMLElement).closest<HTMLElement>("[data-seg]");
+    if (!opt || opt.dataset.seg === "practice") return;
+    const mode = opt.dataset.seg as PuzzleMode;
+    if (!session.practice && session.mode === mode) return; // already on this daily
+    showGame(mode, false);
+  });
   el("btn-hint").addEventListener("click", onHint);
   el("btn-help").addEventListener("click", openHowTo);
   el("howto").querySelector(".dialog-x")?.addEventListener("click", () => (el("howto") as HTMLDialogElement).close());
@@ -184,6 +160,20 @@ const shell = () => {
   icon.rel = "icon";
   icon.href = "data:image/svg+xml," + encodeURIComponent(renderBlorb([0, 1, 0, 0], "fav"));
   document.head.append(icon);
+};
+
+// Row 2 of the top bar: Blorblet | Blorble (✓ once that daily is done today),
+// plus a temporary third "Practice" segment while practicing (locked P2c).
+const renderSeg = () => {
+  const tick = (mode: PuzzleMode) =>
+    saved.days[mode]?.elapsedMs != null ? `<span class="tick">✓</span>` : "";
+  const opt = (mode: PuzzleMode) =>
+    `<button class="opt${!session.practice && session.mode === mode ? " active" : ""}" data-seg="${mode}">` +
+    `${MODES[mode].label}${tick(mode)}</button>`;
+  el("seg").innerHTML =
+    opt("blorblet") +
+    opt("blorble") +
+    (session.practice ? `<button class="opt active" data-seg="practice">Practice</button>` : "");
 };
 
 const openHowTo = () => {
@@ -205,53 +195,9 @@ const startTimer = () => {
 };
 
 // ---------- rendering ----------
-// Re-renders both landing cards from `saved` — sample trio (happy once that
-// mode is done today) + the Play/Resume/done state row. Pure re-render, no
-// side effects: safe to call before any session exists.
-const renderLanding = () => {
-  for (const mode of ["blorblet", "blorble"] as const) {
-    const card = app.querySelector<HTMLElement>(`.level-card[data-mode="${mode}"]`)!;
-    const dayRec = saved.days[mode];
-    const done = dayRec?.elapsedMs != null;
-    const { uid, cards } = LANDING_TRIOS[mode];
-    card.querySelector("[data-art]")!.innerHTML = cards
-      .map((c, i) => `<span>${renderBlorb(c, `${uid}${i}`, done ? "happy" : "rest")}</span>`)
-      .join("");
-    const state = card.querySelector("[data-state]")!;
-    if (done) {
-      state.innerHTML =
-        `<span class="done-line">${checkIcon()} ${formatTime(dayRec.elapsedMs!)} today</span>` +
-        `<button class="linkish" data-results>results</button>` +
-        `<button class="linkish" data-practice>practice</button>`;
-    } else if (dayRec?.startedAt != null) {
-      state.innerHTML =
-        `<button class="primary" data-play>Resume</button>` +
-        `<button class="linkish" data-practice>practice</button>`;
-    } else {
-      state.innerHTML =
-        `<button class="primary" data-play>Play</button>` +
-        `<button class="linkish" data-practice>practice</button>`;
-    }
-  }
-};
-
-const showLanding = () => {
-  if (session) stopTimer();
-  renderLanding();
-  el("hdr-landing").hidden = false;
-  el("landing").hidden = false;
-  el("hdr-game").hidden = true;
-  el("game").hidden = true;
-};
-
 const showGame = (mode: PuzzleMode, practice: boolean) => {
   startSession(mode, practice);
-  el("hdr-level").textContent = MODES[mode].label;
-  el("hdr-meta-label").textContent = practice ? "practice · " : `${formatDate(DATE_ISO)} · `;
-  el("hdr-landing").hidden = true;
-  el("landing").hidden = true;
-  el("hdr-game").hidden = false;
-  el("game").hidden = false;
+  renderSeg();
 };
 
 const renderBoard = () => {
@@ -261,6 +207,27 @@ const renderBoard = () => {
   for (const btn of stageEl().querySelectorAll<HTMLButtonElement>(".card"))
     btn.addEventListener("click", () => onTap(Number(btn.dataset.i)));
   renderFound();
+};
+
+// Fresh daily: the board renders face-down (index-cycled pale silhouettes —
+// never the real cards' shapes) under the curtain card; the first tap of Play
+// lifts the curtain and starts the clock (timer fairness, v2.2 §2).
+const renderCurtain = () => {
+  const m = MODES[session.mode];
+  stageEl().innerHTML =
+    `<div id="board">${session.deal.cards
+      .map((_, i) => `<div class="card back">${cardBackSvg(i)}</div>`)
+      .join("")}</div>` +
+    `<div class="curtain"><div class="curtain-card">` +
+    `<div class="curtain-mascot">${renderBlorb([0, 1, 2, 0], "cm", "happy")}</div>` +
+    `<h3>${m.label}</h3>` +
+    `<div class="curtain-meta mut">${m.size} Blorbs · ${m.targetSets} Sets</div>` +
+    `<button id="btn-play" class="primary">Play</button>` +
+    `<button id="btn-practice-instead" class="linkish">practice instead</button>` +
+    `</div></div>`;
+  renderFound();
+  el("btn-play").addEventListener("click", () => reveal());
+  el("btn-practice-instead").addEventListener("click", () => showGame(session.mode, true));
 };
 
 const miniTrio = (key: string, slot: number) =>
@@ -412,7 +379,8 @@ const win = () => {
     persist();
   }
   stopTimer();
-  el("timer").textContent = formatTime(session.elapsedMs);
+  el("timer").textContent = formatTime(session.elapsedMs); // final time persists in the bar
+  renderSeg(); // the finished mode's ✓ appears in the toggle
   for (let i = 0; i < session.deal.cards.length; i++) {
     setFace(i, "happy");
     cardEl(i).classList.add("happy");
@@ -421,13 +389,19 @@ const win = () => {
   void openResult();
 };
 
+// Done row (locked L3/P1): `n/n ✓ · Results · practice` — the duplicate time
+// is dropped (the final time lives in the top bar); practice is the quiet exit.
+// It takes the hint row's slot (between board and slots, per the lock sheet);
+// the hidden hint button stays as a sibling so el("btn-hint") keeps resolving.
 const renderResultBar = () => {
-  el("found").insertAdjacentHTML(
+  el("hint-row").insertAdjacentHTML(
     "beforeend",
-    `<div class="result"><b>${session.game.foundKeys.length}/${session.game.target} · ${formatTime(session.elapsedMs!)}</b>` +
-      `<button id="btn-results" class="primary">Results</button></div>`,
+    `<div class="result"><b>${session.game.foundKeys.length}/${session.game.target} ✓</b>` +
+      `<button id="btn-results" class="primary">Results</button>` +
+      `<button id="btn-practice" class="linkish">practice</button></div>`,
   );
   el("btn-results").addEventListener("click", () => void openResult());
+  el("btn-practice").addEventListener("click", () => showGame(session.mode, true));
 };
 
 const resultDialogHtml = () => `
@@ -528,11 +502,12 @@ const startSession = (mode: PuzzleMode, practice: boolean) => {
     hints: dayRec?.hints ?? 0, wrongs: dayRec?.wrongs ?? 0,
   };
   el("btn-hint").hidden = true;
-  el("timer").textContent = "0:00";
-  el("found").className = mode; // slot layout hook (Task 8)
+  el("hint-row").querySelector(".result")?.remove(); // drop a previous session's done row
+  el("timer").textContent = ""; // empty until a clock runs (G1 lock)
+  el("found").className = mode; // slot layout hook
   if (!practice) { saved = { ...saved, lastMode: mode }; persist(); }
 
-  if (practice) { reveal(); return; }
+  if (practice) { reveal(); return; } // practice boards start instantly — no curtain
   if (dayRec?.elapsedMs != null) {           // finished earlier today
     session.game = { ...session.game, foundKeys: [...dayRec.foundKeys] };
     session.startedAt = dayRec.startedAt;
@@ -541,27 +516,22 @@ const startSession = (mode: PuzzleMode, practice: boolean) => {
     renderBoard();
     for (let i = 0; i < session.deal.cards.length; i++) setFace(i, "happy");
     renderResultBar();
-  } else if (dayRec?.startedAt != null) {    // resume mid-game
+  } else if (dayRec?.startedAt != null) {    // resume mid-game — no curtain
     reveal();
-  } else {                                   // untouched today
-    reveal();
+  } else {                                   // untouched today — curtain down
+    renderCurtain();
   }
 };
 
 // ---------- boot ----------
 shell();
 const qmode = params.get("mode");
-// `mode` only namespaces autoplay/raster flows now — it no longer deep-links
-// into a running clock; a plain `?mode=X` still lands on the landing screen.
+// `mode` deep-links a specific daily and namespaces dev/raster flows; landing
+// on a board is safe — the curtain keeps a fresh board's clock honest.
 const bootMode: PuzzleMode = qmode === "blorblet" ? "blorblet" : qmode === "blorble" ? "blorble" : saved.lastMode;
-if (params.get("practice") === "1") {
-  showGame(bootMode, true);
-} else if (params.get("autoplay") === "1") {
-  showGame(bootMode, false);
-  // auto-reveal only when a daily gate is actually showing (defensive: showGame's
-  // startSession already reveals the untouched/resume paths on its own)
-  if (!session.practice && session.startedAt === null) reveal();
-} else {
-  showLanding();
-}
+showGame(bootMode, params.get("practice") === "1");
+// ?autoplay=1 skips the curtain (it used to skip the landing) for raster/dev
+// flows; resumed or finished boards have no curtain to lift.
+if (params.get("autoplay") === "1" && !session.practice && session.startedAt === null && session.elapsedMs === null)
+  reveal();
 if (params.get("howto") === "1") openHowTo(); // raster affordance only — never auto-opens otherwise
