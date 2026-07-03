@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { COLORS } from "./blorb";
+import { COLORS, TIP_COLORS } from "./blorb";
 
 // Dichromacy simulation — Viénot, Brettel & Mollon (1999) linear-RGB matrices
 // as published by DaltonLens (https://daltonlens.org). Gate: the three body
@@ -37,6 +37,21 @@ describe("colour-vision-deficiency separation (BLORB-SPEC: adjust hexes only)", 
       for (let i = 0; i < 3; i++)
         for (let j = i + 1; j < 3; j++)
           expect(deltaE(labs[i]!, labs[j]!), `${COLORS[i]} vs ${COLORS[j]} (${mode})`).toBeGreaterThanOrEqual(30);
+    });
+  }
+});
+
+// The antenna-tip channel is SILHOUETTE-coded (ink disc / 10-point star /
+// tilted leaf) — colour is reinforcement only, so the gate is relaxed vs the
+// body trio's ≥30. Measured: gold-vs-green ΔE 24.0 under protanopia is the
+// floor case; ink-vs-either is ≥55 under both dichromacies.
+describe("antenna-tip trio separation (relaxed gate — shape carries the channel)", () => {
+  for (const mode of ["protan", "deutan"] as const) {
+    test(`tip trio ΔE ≥ 20 under ${mode}opia`, () => {
+      const labs = TIP_COLORS.map((c) => toLab(simulate(c, mode)));
+      for (let i = 0; i < 3; i++)
+        for (let j = i + 1; j < 3; j++)
+          expect(deltaE(labs[i]!, labs[j]!), `${TIP_COLORS[i]} vs ${TIP_COLORS[j]} (${mode})`).toBeGreaterThanOrEqual(20);
     });
   }
 });
