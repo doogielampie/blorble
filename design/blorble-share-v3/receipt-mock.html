@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Blorble receipt share-card — visual reference (v3)</title>
+<style>
+  :root { --paper:#fbf8f3; --ink:#2a2320; --muted:#8a7d74; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:#e7e2da; font-family:ui-rounded,ui-sans-serif,system-ui,sans-serif; color:var(--ink); padding:28px; }
+  h1 { font-size:18px; margin:0 0 4px; }
+  p.sub { color:#6b5d54; font-size:13px; margin:0 0 24px; }
+  .grid { display:grid; grid-template-columns:repeat(4, 1fr); gap:22px; max-width:1200px; }
+  .cell { text-align:center; }
+  .cap { font-size:12.5px; font-weight:700; margin-top:10px; }
+  .cap .sub { display:block; font-weight:400; color:#6b5d54; font-size:11px; margin-top:2px; }
+
+  /* ---------- the receipt itself (per docs/superpowers/specs/2026-07-04-blorble-receipt-share.md) ---------- */
+  .receipt-card { background:var(--paper); border:2.5px solid var(--ink); border-radius:16px; padding:20px 18px 22px; width:100%; max-width:280px; margin:0 auto; box-shadow:0 4px 18px rgba(42,35,32,.14); }
+  .receipt { font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; color: var(--ink); text-align:center; }
+  .rc-logo { width: 76px; margin: 0 auto 6px; }
+  .rc-title { font-size: 26px; font-weight: 800; letter-spacing: 0.02em; line-height: 1; }
+  .rc-size { font-size: 12px; color: var(--muted); margin-top: 5px; }
+  .rc-rule { border-top: 1.5px dashed #c9c0b2; margin: 10px 0; }
+  .rc-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 2px; }
+  .rc-row.rc-big { font-size: 17px; font-weight: 700; }
+  .rc-note { font-size: 12px; color: #5f544b; margin-top: 3px; }
+  .rc-note.rc-quip { font-weight: 700; color: var(--ink); }
+  .rc-barcode { height: 30px; width: 74%; margin: 12px auto 6px;
+    background: repeating-linear-gradient(90deg, #2a2320 0 2px, transparent 2px 4px, #2a2320 4px 5px, transparent 5px 8px, #2a2320 8px 11px, transparent 11px 13px); }
+  .rc-foot { font-size: 10.5px; color: var(--muted); }
+</style>
+</head>
+<body>
+<h1>Blorble receipt share-card — visual reference</h1>
+<p class="sub">Standalone mock of the LOCKED design in docs/superpowers/specs/2026-07-04-blorble-receipt-share.md. Four samples: Blorblet clean/messy, Blorble clean/messy.</p>
+<div id="app"></div>
+<script>
+// ---- renderer (JS copy of shipped src/blorb.ts, verbatim from design/blorble-v2.2-ui/mockups.html — mockup use only) ----
+const INK="#2a2320";
+const COLORS=["#1f97f0","#f2953c","#eb648c"];
+const TIP_COLORS=[INK,"#f0a91e","#3fa346"];
+const SHAPES=[
+ a=>`<circle cx="100" cy="116" r="78" ${a}/>`,
+ a=>`<path d="M30 160 C24 82 50 30 100 30 C150 30 176 82 170 160 C170 188 123 188 123 160 C123 188 77 188 77 160 C77 188 30 188 30 160 Z" ${a}/>`,
+ a=>`<path d="M112 30 C118 52 168 96 166 132 a66 66 0 1 1 -132 1 C34 96 82 52 94 42 C100 34 105 30 112 30 Z" ${a}/>`,
+];
+const STAR_D="M0.0 -14.0 C1.5 -14.0 2.3 -7.8 4.5 -6.2 C6.7 -4.6 12.8 -5.8 13.3 -4.3 C13.8 -2.9 8.2 -0.2 7.3 2.4 C6.5 5.0 9.4 10.4 8.2 11.3 C7.0 12.2 2.7 7.7 0.0 7.7 C-2.7 7.7 -7.0 12.2 -8.2 11.3 C-9.4 10.4 -6.5 5.0 -7.3 2.4 C-8.2 -0.2 -13.8 -2.9 -13.3 -4.3 C-12.8 -5.8 -6.7 -4.6 -4.5 -6.2 C-2.3 -7.8 -1.5 -14.0 0.0 -14.0 Z";
+const TIPS=[
+ (tx,ty)=>`<circle cx="${tx}" cy="${ty}" r="10" fill="${INK}"/>`,
+ (tx,ty,side)=>`<g transform="translate(${tx} ${ty}) rotate(${side<0?-18:18})"><path d="${STAR_D}" fill="${TIP_COLORS[1]}" stroke="${INK}" stroke-width="2" stroke-linejoin="round"/></g>`,
+ (tx,ty,side)=>`<g transform="translate(${tx} ${ty}) rotate(${side<0?-22:22})"><path d="M0 2 C -13 2 -13 -8.8 0 -16 C 13 -8.8 13 2 0 2 Z" fill="${TIP_COLORS[2]}" stroke="${INK}" stroke-width="2"/><line x1="0" y1="0" x2="0" y2="-13" stroke="${INK}" stroke-width="1.1" opacity="0.6"/></g>`,
+];
+const ANTENNA_BASE=[{y:50,lx:76},{y:48,lx:74},{y:74,lx:80}];
+const antennaeSvg=(si,ti)=>{const b=ANTENNA_BASE[si];return [-1,1].map(side=>{const bx=side<0?b.lx:200-b.lx;const tx=side<0?bx-17:bx+17;const ty=b.y-40;return `<line x1="${bx}" y1="${b.y}" x2="${tx}" y2="${ty}" stroke="${INK}" stroke-width="4" stroke-linecap="round"/>`+TIPS[ti](tx,ty,side);}).join("");};
+const eyesSvg=n=>Array.from({length:n},(_,i)=>100+(i-(n-1)/2)*44).map(x=>`<circle cx="${x}" cy="105" r="19" fill="#fff" stroke="${INK}" stroke-width="3"/><circle cx="${x+1}" cy="108" r="11" fill="${INK}"/><circle cx="${x-5}" cy="98" r="4.3" fill="#fff"/><circle cx="${x+6}" cy="113" r="1.9" fill="#fff" opacity="0.85"/>`).join("");
+const MOUTHS={
+ rest:`<path d="M84 148 Q100 172 116 148 Z" fill="${INK}"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>`,
+ happy:`<path d="M76 144 Q100 182 124 144 Z" fill="${INK}"/><path d="M93 144 L103 144 L98 158 Z" fill="#fff"/>`,
+};
+let uidc=0;
+const renderBlorb=(card,expr="rest")=>{const [ci,ei,si,ti]=card;const uid="m"+(uidc++);const el=SHAPES[si];
+ return `<svg viewBox="0 -10 200 224" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto;display:block">`+
+ `<defs><clipPath id="bclip-${uid}">${el("")}</clipPath><linearGradient id="bshade-${uid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.10"/></linearGradient></defs>`+
+ `<ellipse cx="100" cy="206" rx="50" ry="7" fill="${INK}" opacity="0.15"/>`+antennaeSvg(si,ti)+el(`fill="${COLORS[ci]}"`)+
+ `<g clip-path="url(#bclip-${uid})">${el(`fill="url(#bshade-${uid})"`)}</g>`+el(`fill="none" stroke="${INK}" stroke-width="4.5"`)+
+ eyesSvg(ei+1)+MOUTHS[expr]+`</svg>`;};
+
+// ---- receipt renderer (mirrors main.ts openResult / renderStatsCard — both
+// will consume the same receiptModel; this mock hardcodes four model instances) ----
+const receiptCard = (m, logoCard) => {
+  const rows = m.rows.map(r => `<div class="rc-row"><span>${r.label}</span><span>${r.value}</span></div>`).join("");
+  return `<div class="receipt-card"><div class="receipt">` +
+    `<div class="rc-logo">${renderBlorb(logoCard, "happy")}</div>` +
+    `<div class="rc-title">${m.title}</div>` +
+    `<div class="rc-size">${m.size}</div>` +
+    `<div class="rc-rule"></div>` +
+    rows +
+    `<div class="rc-rule"></div>` +
+    `<div class="rc-row rc-big"><span>TIME</span><span>${m.time}</span></div>` +
+    `<div class="rc-rule"></div>` +
+    `<div class="rc-note rc-quip">* ${m.quip} *</div>` +
+    `<div class="rc-note">${m.note}</div>` +
+    `<div class="rc-barcode"></div>` +
+    `<div class="rc-foot">${m.date} · ${m.url}</div>` +
+  `</div></div>`;
+};
+
+// ---- four locked samples (per task brief) ----
+const rows = (sets, hints, wrongs) => [
+  { label: "SETS FOUND", value: `${sets} / ${sets}` },
+  { label: "HINTS", value: `x ${hints}` },
+  { label: "GRUMPS", value: `x ${wrongs}` },
+];
+const URL = "doogielampie.github.io/blorble";
+const NOTE = "thank you for blorbing";
+
+const SAMPLES = [
+  {
+    cap: "Blorblet — clean solve", sub: "9 Blorbs · 4 Sets · no hints, no misses",
+    logo: [1,0,1,1],
+    m: { title:"BLORBLET", size:"9 Blorbs · 4 Sets", rows: rows(4,0,0), time:"1:52", quip:"clean blorbing!", note:NOTE, date:"Jul 3", url:URL },
+  },
+  {
+    cap: "Blorblet — messy solve", sub: "9 Blorbs · 4 Sets · 1 hint, 2 grumps",
+    logo: [2,1,2,0],
+    m: { title:"BLORBLET", size:"9 Blorbs · 4 Sets", rows: rows(4,1,2), time:"2:14", quip:"a little help never hurt.", note:NOTE, date:"Jul 3", url:URL },
+  },
+  {
+    cap: "Blorble — clean solve", sub: "12 Blorbs · 6 Sets · no hints, no misses",
+    logo: [0,2,0,2],
+    m: { title:"BLORBLE", size:"12 Blorbs · 6 Sets", rows: rows(6,0,0), time:"5:48", quip:"flawless. the Blorbs bow.", note:NOTE, date:"Jul 3", url:URL },
+  },
+  {
+    cap: "Blorble — messy solve", sub: "12 Blorbs · 6 Sets · 1 hint, 2 grumps",
+    logo: [1,1,1,2],
+    m: { title:"BLORBLE", size:"12 Blorbs · 6 Sets", rows: rows(6,1,2), time:"6:12", quip:"grumps happened.", note:NOTE, date:"Jul 3", url:URL },
+  },
+];
+
+let html = `<div class="grid">`;
+for (const s of SAMPLES) {
+  html += `<div class="cell">${receiptCard(s.m, s.logo)}<div class="cap">${s.cap}<span class="sub">${s.sub}</span></div></div>`;
+}
+html += `</div>`;
+document.getElementById("app").innerHTML = html;
+</script>
+</body>
+</html>
