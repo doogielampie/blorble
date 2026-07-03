@@ -19,9 +19,11 @@ export type SavedState = {
   days: Record<PuzzleMode, DayProgress | null>;
 };
 
+// lastMode "blorblet": with nothing stored, boot lands on the Blorblet fresh
+// daily (v2.2 §1 — "last-played mode if stored, else Blorblet").
 export const initialState = (): SavedState => ({
   v: 2, streak: 0, lastWinDate: null, best: { blorble: null, blorblet: null },
-  seenHowTo: false, lastMode: "blorble", days: { blorble: null, blorblet: null },
+  seenHowTo: false, lastMode: "blorblet", days: { blorble: null, blorblet: null },
 });
 
 const DAY_MS = 86_400_000;

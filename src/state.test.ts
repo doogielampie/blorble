@@ -56,7 +56,8 @@ describe("state v2", () => {
     expect(s.best).toEqual({ blorble: 221_000, blorblet: null });
     expect(s.days.blorble).toEqual({ date: "2026-07-01", foundKeys: ["0-1-2"], startedAt: 9, elapsedMs: 221_000, hints: 0, wrongs: 0 });
     expect(s.seenHowTo).toBe(true);
-    expect(s.lastMode).toBe("blorble");
+    // v1 stored no mode — the "else Blorblet" first-visit default applies (v2.2 §1)
+    expect(s.lastMode).toBe("blorblet");
   });
 
   test("v2 round-trip; garbage survives", () => {
@@ -66,5 +67,26 @@ describe("state v2", () => {
     expect(load(st)).toEqual(s);
     st.setItem("blorble.v1", "{nope");
     expect(load(st)).toEqual(initialState());
+  });
+
+  test("first visit (nothing stored) defaults to the Blorblet daily", () => {
+    expect(initialState().lastMode).toBe("blorblet");
+  });
+
+  // v2.2 hard constraint: key + every existing v:2 field unchanged —
+  // a save written by v2.1 must round-trip through load() byte-unchanged.
+  test("v2.1-era save (all fields present) loads unchanged", () => {
+    const st = fakeStorage();
+    const v21 = {
+      v: 2, streak: 3, lastWinDate: "2026-07-02",
+      best: { blorble: 221_000, blorblet: 90_000 },
+      seenHowTo: true, lastMode: "blorble",
+      days: {
+        blorble: { date: "2026-07-02", foundKeys: ["0-1-2", "3-4-5"], startedAt: 5, elapsedMs: 221_000, hints: 1, wrongs: 2 },
+        blorblet: null,
+      },
+    };
+    st.setItem("blorble.v1", JSON.stringify(v21));
+    expect(load(st)).toEqual(v21);
   });
 });
