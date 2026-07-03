@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { cardLines, quip } from "./card";
+import { quip, receiptModel } from "./card";
 
 describe("quip", () => {
   test("deterministic: same (isoDate, label, outcome) always returns the same line", () => {
@@ -26,25 +26,43 @@ describe("quip", () => {
   });
 });
 
-describe("cardLines", () => {
-  test("clean solve: marksLine reads 'no hints, no misses'", () => {
-    expect(cardLines({ label: "Blorble", isoDate: "2026-07-02", elapsedMs: 433_000, hints: 0, wrongs: 0 }))
-      .toEqual(["no hints, no misses", "Blorble · Jul 2"]);
+describe("receiptModel", () => {
+  const base = { label: "Blorble", isoDate: "2026-07-03", elapsedMs: 348_000, size: 12, sets: 6 };
+
+  test("daily, hints + grumps: title, size line, itemised rows, date, url", () => {
+    const m = receiptModel({ ...base, hints: 1, wrongs: 2 });
+    expect(m.title).toBe("BLORBLE");
+    expect(m.size).toBe("12 Blorbs · 6 Sets");
+    expect(m.rows).toEqual([
+      { label: "SETS FOUND", value: "6 / 6" },
+      { label: "HINTS", value: "x 1" },
+      { label: "GRUMPS", value: "x 2" },
+    ]);
+    expect(m.time).toBe("5:48");
+    expect(m.note).toBe("thank you for blorbing");
+    expect(m.date).toBe("Jul 3");
+    expect(m.url).toBe("doogielampie.github.io/blorble");
   });
-  test("hints and wrongs both shown", () => {
-    expect(cardLines({ label: "Blorblet", isoDate: "2026-07-02", elapsedMs: 161_000, hints: 2, wrongs: 1 }))
-      .toEqual(["💡2 ✖️1", "Blorblet · Jul 2"]);
+
+  test("Blorblet clean solve: zero counts still listed, title + size reflect the small mode", () => {
+    const m = receiptModel({ label: "Blorblet", isoDate: "2026-07-03", elapsedMs: 112_000, hints: 0, wrongs: 0, size: 9, sets: 4 });
+    expect(m.title).toBe("BLORBLET");
+    expect(m.size).toBe("9 Blorbs · 4 Sets");
+    expect(m.rows).toEqual([
+      { label: "SETS FOUND", value: "4 / 4" },
+      { label: "HINTS", value: "x 0" },
+      { label: "GRUMPS", value: "x 0" },
+    ]);
+    expect(m.time).toBe("1:52");
+    expect(m.date).toBe("Jul 3");
   });
-  test("hints only", () => {
-    expect(cardLines({ label: "Blorble", isoDate: "2026-07-05", elapsedMs: 90_000, hints: 1, wrongs: 0 }))
-      .toEqual(["💡1", "Blorble · Jul 5"]);
+
+  test("practice: date slot reads 'practice'", () => {
+    expect(receiptModel({ ...base, hints: 0, wrongs: 0, practice: true }).date).toBe("practice");
   });
-  test("wrongs only", () => {
-    expect(cardLines({ label: "Blorble", isoDate: "2026-07-05", elapsedMs: 90_000, hints: 0, wrongs: 3 }))
-      .toEqual(["✖️3", "Blorble · Jul 5"]);
-  });
-  test("practice: context line reads Practice · mode, no date", () => {
-    expect(cardLines({ label: "Blorblet", isoDate: "2026-07-02", elapsedMs: 61_000, hints: 0, wrongs: 0, practice: true }))
-      .toEqual(["no hints, no misses", "Practice · Blorblet"]);
+
+  test("quip is the deterministic performance line", () => {
+    const info = { ...base, hints: 1, wrongs: 0 };
+    expect(receiptModel(info).quip).toBe(quip(info));
   });
 });

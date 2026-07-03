@@ -13,18 +13,28 @@ export const quip = (info: { isoDate: string; label: string; hints: number; wron
   return pool[h % pool.length]!;
 };
 
-// Text lines for the shareable stats image (pure — the canvas part is thin).
-// [marksLine, contextLine] — no streak/best (those live only in-app now).
-export const cardLines = (info: ShareInfo): string[] => {
-  const marksLine = info.hints === 0 && info.wrongs === 0
-    ? "no hints, no misses"
-    : [info.hints > 0 ? `💡${info.hints}` : "", info.wrongs > 0 ? `✖️${info.wrongs}` : ""].filter(Boolean).join(" ");
-  // Daily: "Blorble · Jul 3" (F6). Practice: "Practice · Blorble" (P3) — the
-  // stats-card PNG mirrors the dialog. shareText (the copy-text format) is
-  // untouched and still reads "Blorble · practice · …".
-  const contextLine = info.practice ? `Practice · ${info.label}` : `${info.label} · ${formatDate(info.isoDate)}`;
-  return [marksLine, contextLine];
+export type ReceiptRow = { label: string; value: string };
+export type ReceiptModel = {
+  title: string; size: string; rows: ReceiptRow[];
+  time: string; quip: string; note: string; date: string; url: string;
 };
+
+// The receipt's content, modelled once so the in-app dialog (HTML) and the
+// shared PNG (canvas) render identically. Spoiler-free; no streak/best.
+export const receiptModel = (info: ShareInfo): ReceiptModel => ({
+  title: info.label.toUpperCase(),
+  size: `${info.size} Blorbs · ${info.sets} Sets`,
+  rows: [
+    { label: "SETS FOUND", value: `${info.sets} / ${info.sets}` },
+    { label: "HINTS", value: `x ${info.hints}` },
+    { label: "GRUMPS", value: `x ${info.wrongs}` },
+  ],
+  time: formatTime(info.elapsedMs),
+  quip: quip(info),
+  note: "thank you for blorbing",
+  date: info.practice ? "practice" : formatDate(info.isoDate),
+  url: "doogielampie.github.io/blorble",
+});
 
 // Portrait 800×1000 shareable PNG mirroring the results dialog — mascot with
 // a speech-bubble quip, huge time, marks line, context line, URL footer.
@@ -40,7 +50,10 @@ export const renderStatsCard = (info: ShareInfo, blorbSvg: string): Promise<Blob
     const img = new Image();
     img.onload = () => {
       // speech bubble first, top-center, flattened bottom-left corner
-      const [marksLine = "", contextLine = ""] = cardLines(info);
+      const marksLine = info.hints === 0 && info.wrongs === 0
+        ? "no hints, no misses"
+        : [info.hints > 0 ? `💡${info.hints}` : "", info.wrongs > 0 ? `✖️${info.wrongs}` : ""].filter(Boolean).join(" ");
+      const contextLine = info.practice ? `Practice · ${info.label}` : `${info.label} · ${formatDate(info.isoDate)}`;
       const q = quip(info);
       const bubbleX = 40;
       const bubbleY = 40;

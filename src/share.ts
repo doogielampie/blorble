@@ -18,6 +18,8 @@ export type ShareInfo = {
   hints: number;
   wrongs: number;
   practice?: boolean;
+  size: number;        // Blorbs on the board (9 | 12) — for the receipt
+  sets: number;        // target Sets (4 | 6) — for the receipt
 };
 
 // Spoiler-free, honesty-first: raw time plus what it took. ✨ = clean solve.

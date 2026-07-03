@@ -2,10 +2,10 @@ import "./style.css";
 import { cardBackSvg } from "./back";
 import { renderBlorb, type Expression } from "./blorb";
 import { MODES, type DealtBoard, type PuzzleMode, dailyBoard, practiceBoard } from "./board";
-import { cardLines, quip, renderStatsCard } from "./card";
+import { receiptModel, renderStatsCard } from "./card";
 import { type GameState, hint, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
-import { formatDate, formatTime, shareText } from "./share";
+import { type ShareInfo, formatDate, formatTime, shareText } from "./share";
 import { type DayProgress, type SavedState, freshDay, load, recordWin, save } from "./state";
 
 // Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the curtain.
@@ -426,9 +426,10 @@ const resultDialogHtml = () => `
     </div>
   </dialog>`;
 
-const shareInfo = () => ({
+const shareInfo = (): ShareInfo => ({
   label: MODES[session.mode].label, isoDate: DATE_ISO, elapsedMs: session.elapsedMs!,
   hints: session.hints, wrongs: session.wrongs, practice: session.practice,
+  size: MODES[session.mode].size, sets: MODES[session.mode].targetSets,
 });
 
 const openResult = async () => {
@@ -447,16 +448,23 @@ const openResult = async () => {
   other.disabled = false;
   other.classList.remove("is-disabled");
   const info = shareInfo();
-  const [marksLine = "", contextLine = ""] = cardLines(info);
+  const m = receiptModel(info);
+  const rows = m.rows.map((r) => `<div class="rc-row"><span>${r.label}</span><span>${r.value}</span></div>`).join("");
   el("result-body").innerHTML =
-    `<div class="r-top">` +
-      `<div class="r-mascot">${renderBlorb(session.deal.cards[0]!, "mascot", "happy")}</div>` +
-      `<div class="bubble">${quip(info)}</div>` +
-    `</div>` +
-    `<p class="r-time">${formatTime(session.elapsedMs!)}</p>` +
-    // accent only on the emphasis (F6); emoji marks lines pass through unchanged
-    `<p class="r-marks">${marksLine.replace("no misses", '<span class="em">no misses</span>')}</p>` +
-    `<p class="r-ctx mut">${contextLine}</p>`;
+    `<div class="receipt">` +
+      `<div class="rc-logo">${renderBlorb(session.deal.cards[0]!, "mascot", "happy")}</div>` +
+      `<div class="rc-title">${m.title}</div>` +
+      `<div class="rc-size">${m.size}</div>` +
+      `<div class="rc-rule"></div>` +
+      rows +
+      `<div class="rc-rule"></div>` +
+      `<div class="rc-row rc-big"><span>TIME</span><span>${m.time}</span></div>` +
+      `<div class="rc-rule"></div>` +
+      `<div class="rc-note rc-quip">* ${m.quip} *</div>` +
+      `<div class="rc-note">${m.note}</div>` +
+      `<div class="rc-barcode"></div>` +
+      `<div class="rc-foot">${m.date} · ${m.url}</div>` +
+    `</div>`;
   (el("result") as HTMLDialogElement).showModal();
   blurAutofocus();
   try {
