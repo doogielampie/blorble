@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Blorble v2.4 — how-to redesign (locked visual reference)</title>
+<style>
+  :root{--paper:#fbf8f3;--ink:#2a2320;--tile:#f4f0ea;--muted:#8a7d74;--accent:#1f97f0;--grn:#2f8f6b;--red:#c2452f}
+  *{box-sizing:border-box}
+  body{margin:0;background:#e7e2da;font-family:ui-rounded,ui-sans-serif,system-ui,sans-serif;color:var(--ink);display:flex;justify-content:center;padding:24px}
+  /* This mock renders the LOCKED how-to copy (humanizer + plain-language applied:
+     no em-dashes; FRE 96.17 / grade 1.35). It is the visual target for the
+     howtoDialogHtml rewrite. Blorb renderer copied verbatim from
+     design/blorble-v2.2-ui/mockups.html (mockup use only). */
+  .dlg{position:relative;width:330px;background:var(--paper);border:2.5px solid var(--ink);border-radius:16px;padding:18px 18px 20px}
+  .x{position:absolute;top:10px;right:12px;color:var(--muted);font-size:20px;line-height:1}
+  h2{margin:0 0 6px;font-size:18px}
+  p{font-size:14px;line-height:1.35;margin:6px 0}
+  .premise{color:var(--muted);font-size:13.5px;font-style:italic;margin:0 0 10px}
+  .premise b{color:var(--ink);font-style:normal}
+  .legend{display:grid;grid-template-columns:82px 1fr;gap:6px 8px;align-items:center;margin:6px 0 10px}
+  .legend>span{font-size:14px}
+  .row3{display:flex;gap:4px}
+  .row3 .bz{flex:1;max-width:52px}
+  .rule{background:var(--tile);border-radius:10px;padding:9px 11px;font-size:13.5px;line-height:1.4;margin:8px 0 12px}
+  .walk{border:1.5px solid #e3dccf;border-radius:12px;padding:10px 11px;margin:9px 0}
+  .walk.ok{border-color:#bfe0d1}.walk.no{border-color:#eccbc2}
+  .wh{font-size:13px;font-weight:700;margin-bottom:6px}
+  .trio{display:flex;gap:6px;margin:2px 0 8px}
+  .trio .cell{flex:1;background:var(--tile);border-radius:10px;padding:5px;position:relative}
+  .trio .cell.odd{outline:2.5px dashed var(--red);outline-offset:1px}
+  .trio .cell.odd::after{content:"odd one out";position:absolute;left:50%;bottom:-7px;transform:translateX(-50%);background:var(--red);color:#fff;font-size:8.5px;font-weight:700;padding:1px 5px;border-radius:6px;white-space:nowrap}
+  .chk{display:flex;align-items:center;gap:6px;font-size:12.5px;padding:2px 0}
+  .chk span{color:var(--muted);width:64px;flex:none}
+  .chk b{font-weight:600;flex:1}
+  .chk i{font-style:normal;font-weight:800}
+  .chk i.y,.verdict.ok{color:var(--grn)}
+  .chk i.n,.verdict.no{color:var(--red)}
+  .verdict{font-size:13px;font-weight:700;margin-top:7px}
+  .fine{color:var(--muted);font-size:10px;text-align:center;margin:12px 0 0;line-height:1.25}
+  .bz svg,.cell svg{display:block;width:100%;height:auto}
+</style>
+</head>
+<body>
+<div class="dlg">
+  <div class="x">×</div>
+  <h2>How to play</h2>
+  <p class="premise">Blorbs love company. Help them into <b>pods</b> where nobody's the odd one out.</p>
+
+  <p>Every Blorb has 4 features: colour, eyes, shape, and antennae.</p>
+  <div class="legend">
+    <span>Colour</span><div class="row3" data-set="0,1,0,0|1,1,0,0|2,1,0,0"></div>
+    <span>Eyes</span><div class="row3" data-set="0,0,0,0|0,1,0,0|0,2,0,0"></div>
+    <span>Shape</span><div class="row3" data-set="0,1,0,0|0,1,1,0|0,1,2,0"></div>
+    <span>Antennae</span><div class="row3" data-set="0,1,0,0|0,1,0,1|0,1,0,2"></div>
+  </div>
+
+  <div class="rule">A <b>pod</b> is 3 Blorbs where each feature is the same on all three, or different on all three. No odd one out.</div>
+
+  <div class="walk ok">
+    <div class="wh">Is this a pod?</div>
+    <div class="trio" data-set="0,1,0,0|1,1,0,0|2,1,0,0"></div>
+    <div class="chk"><span>colour</span><b>all different</b><i class="y">&#10003;</i></div>
+    <div class="chk"><span>eyes</span><b>all same</b><i class="y">&#10003;</i></div>
+    <div class="chk"><span>shape</span><b>all same</b><i class="y">&#10003;</i></div>
+    <div class="chk"><span>antennae</span><b>all same</b><i class="y">&#10003;</i></div>
+    <div class="verdict ok">No odd one out. It's a pod!</div>
+  </div>
+
+  <div class="walk no">
+    <div class="wh">And this one?</div>
+    <div class="trio" data-set="0,0,0,0|0,1,0,0|1,2,0,0" data-odd="2"></div>
+    <div class="chk"><span>colour</span><b>two blue, one orange</b><i class="n">&#10007;</i></div>
+    <div class="verdict no">The orange one is the odd one out. Not a pod.</div>
+  </div>
+
+  <div class="walk ok2">
+    <div class="trio" data-set="0,0,0,0|1,1,1,1|2,2,2,2"></div>
+    <div class="verdict ok">Every feature different on all three. Also a pod.</div>
+  </div>
+
+  <p class="fine">inspired by the card game SET &middot; not affiliated with Set Enterprises/PlayMonster</p>
+</div>
+
+<script>
+// Blorb renderer (JS copy of shipped src/blorb.ts, verbatim from design/blorble-v2.2-ui/mockups.html — mock use only)
+var INK="#2a2320",COL=["#1f97f0","#f2953c","#eb648c"],TIP=[INK,"#f0a91e","#3fa346"];
+var SH=[
+ function(a){return '<circle cx="100" cy="116" r="78" '+a+'/>';},
+ function(a){return '<path d="M30 160 C24 82 50 30 100 30 C150 30 176 82 170 160 C170 188 123 188 123 160 C123 188 77 188 77 160 C77 188 30 188 30 160 Z" '+a+'/>';},
+ function(a){return '<path d="M112 30 C118 52 168 96 166 132 a66 66 0 1 1 -132 1 C34 96 82 52 94 42 C100 34 105 30 112 30 Z" '+a+'/>';}
+];
+var STAR="M0.0 -14.0 C1.5 -14.0 2.3 -7.8 4.5 -6.2 C6.7 -4.6 12.8 -5.8 13.3 -4.3 C13.8 -2.9 8.2 -0.2 7.3 2.4 C6.5 5.0 9.4 10.4 8.2 11.3 C7.0 12.2 2.7 7.7 0.0 7.7 C-2.7 7.7 -7.0 12.2 -8.2 11.3 C-9.4 10.4 -6.5 5.0 -7.3 2.4 C-8.2 -0.2 -13.8 -2.9 -13.3 -4.3 C-12.8 -5.8 -6.7 -4.6 -4.5 -6.2 C-2.3 -7.8 -1.5 -14.0 0.0 -14.0 Z";
+var TIPS=[
+ function(x,y){return '<circle cx="'+x+'" cy="'+y+'" r="10" fill="'+INK+'"/>';},
+ function(x,y,s){return '<g transform="translate('+x+' '+y+') rotate('+(s<0?-18:18)+')"><path d="'+STAR+'" fill="'+TIP[1]+'" stroke="'+INK+'" stroke-width="2" stroke-linejoin="round"/></g>';},
+ function(x,y,s){return '<g transform="translate('+x+' '+y+') rotate('+(s<0?-22:22)+')"><path d="M0 2 C -13 2 -13 -8.8 0 -16 C 13 -8.8 13 2 0 2 Z" fill="'+TIP[2]+'" stroke="'+INK+'" stroke-width="2"/><line x1="0" y1="0" x2="0" y2="-13" stroke="'+INK+'" stroke-width="1.1" opacity="0.6"/></g>';}
+];
+var AB=[{y:50,lx:76},{y:48,lx:74},{y:74,lx:80}];
+function ant(si,ti){return [-1,1].map(function(s){var b=AB[si],bx=s<0?b.lx:200-b.lx,tx=s<0?bx-17:bx+17,ty=b.y-40;return '<line x1="'+bx+'" y1="'+b.y+'" x2="'+tx+'" y2="'+ty+'" stroke="'+INK+'" stroke-width="4" stroke-linecap="round"/>'+TIPS[ti](tx,ty,s);}).join("");}
+function eyes(n){var o="";for(var i=0;i<n;i++){var x=100+(i-(n-1)/2)*44;o+='<circle cx="'+x+'" cy="105" r="19" fill="#fff" stroke="'+INK+'" stroke-width="3"/><circle cx="'+(x+1)+'" cy="108" r="11" fill="'+INK+'"/><circle cx="'+(x-5)+'" cy="98" r="4.3" fill="#fff"/><circle cx="'+(x+6)+'" cy="113" r="1.9" fill="#fff" opacity="0.85"/>';}return o;}
+var MO='<path d="M84 148 Q100 172 116 148 Z" fill="'+INK+'"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>';
+var U=0;
+function blorb(c){var ci=c[0],ei=c[1],si=c[2],ti=c[3],u="h"+(U++);
+ return '<svg viewBox="0 -10 200 224" xmlns="http://www.w3.org/2000/svg">'
+ +'<defs><clipPath id="c'+u+'">'+SH[si]("")+'</clipPath><linearGradient id="g'+u+'" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#000" stop-opacity="0"/><stop offset="100%" stop-color="#000" stop-opacity="0.10"/></linearGradient></defs>'
+ +'<ellipse cx="100" cy="206" rx="50" ry="7" fill="'+INK+'" opacity="0.15"/>'
+ +ant(si,ti)+SH[si]('fill="'+COL[ci]+'"')
+ +'<g clip-path="url(#c'+u+')">'+SH[si]('fill="url(#g'+u+')"')+'</g>'
+ +SH[si]('fill="none" stroke="'+INK+'" stroke-width="4.5"')
+ +eyes(ei+1)+MO+'</svg>';}
+var parse=function(s){return s.split("|").map(function(t){return t.split(",").map(Number);});};
+document.querySelectorAll(".row3[data-set]").forEach(function(el){
+  el.innerHTML=parse(el.getAttribute("data-set")).map(function(c){return '<span class="bz">'+blorb(c)+'</span>';}).join("");
+});
+document.querySelectorAll(".trio[data-set]").forEach(function(el){
+  var odd=el.getAttribute("data-odd");
+  el.innerHTML=parse(el.getAttribute("data-set")).map(function(c,i){return '<div class="cell'+(String(i)===odd?" odd":"")+'">'+blorb(c)+'</div>';}).join("");
+});
+</script>
+</body>
+</html>
