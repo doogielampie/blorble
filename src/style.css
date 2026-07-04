@@ -4,6 +4,8 @@
   --tile: #f4f0ea;
   --accent: #1f97f0;
   --muted: #8a7d74;
+  --grn: #2f8f6b;
+  --red: #c2452f;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -133,12 +135,31 @@ dialog {
 dialog::backdrop { background: rgba(42, 35, 32, 0.45); }
 dialog h2 { margin: 0 0 6px; font-size: 18px; }
 dialog p { font-size: 14px; line-height: 1.32; margin: 5px 0; }
-.example { display: flex; gap: 6px; }
-.example > span { flex: 1; background: var(--tile); border-radius: 10px; padding: 4px; }
-.caption { color: var(--muted); font-size: 12.5px; }
+.premise { color: var(--muted); font-size: 13.5px; font-style: italic; margin: 0 0 10px; }
+.premise b { color: var(--ink); font-style: normal; }
 .legend { display: grid; grid-template-columns: 82px 1fr; gap: 6px 8px; align-items: center; } /* locked: 82px labels + 8px column gap */
 .legend .row3 { display: flex; gap: 4px; }
 .legend .row3 > span { flex: 1; max-width: 52px; }
+.rule { background: var(--tile); border-radius: 10px; padding: 9px 11px; font-size: 13.5px; line-height: 1.4; margin: 8px 0 12px; }
+.walk { border: 1.5px solid #e3dccf; border-radius: 12px; padding: 10px 11px; margin: 9px 0; }
+.walk.ok { border-color: #bfe0d1; }
+.walk.no { border-color: #eccbc2; }
+.wh { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+.trio { display: flex; gap: 6px; margin: 2px 0 8px; }
+.trio .cell { flex: 1; background: var(--tile); border-radius: 10px; padding: 5px; position: relative; }
+.trio .cell.odd { outline: 2.5px dashed var(--red); outline-offset: 1px; }
+.trio .cell.odd::after {
+  content: "odd one out"; position: absolute; left: 50%; bottom: -7px; transform: translateX(-50%);
+  background: var(--red); color: #fff; font-size: 8.5px; font-weight: 700; padding: 1px 5px;
+  border-radius: 6px; white-space: nowrap;
+}
+.chk { display: flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 2px 0; }
+.chk span { color: var(--muted); width: 64px; flex: none; }
+.chk b { font-weight: 600; flex: 1; }
+.chk i { font-style: normal; font-weight: 800; }
+.chk i.y, .verdict.ok { color: var(--grn); }
+.chk i.n, .verdict.no { color: var(--red); }
+.verdict { font-size: 13px; font-weight: 700; margin-top: 7px; }
 .fineprint { color: var(--muted); font-size: 10px; text-align: center; margin: 7px 0 0; line-height: 1.25; }
 
 /* result dialog — the receipt IS the share card (rendered identically to the

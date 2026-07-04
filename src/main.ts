@@ -92,10 +92,21 @@ const legendRow = (label: string, uidPrefix: string, cards: readonly [number, nu
       <span>${label}</span>
       <div class="row3">${cards.map((c, i) => `<span>${renderBlorb(c, `${uidPrefix}${i}`)}</span>`).join("")}</div>`;
 
+// A trio of Blorbs rendered as ".trio .cell" cells, with an optional index ringed as the odd one out.
+const trioHtml = (uidPrefix: string, cards: readonly [number, number, number, number][], oddIndex?: number) =>
+  `<div class="trio">${cards
+    .map((c, i) => `<div class="cell${i === oddIndex ? " odd" : ""}">${renderBlorb(c, `${uidPrefix}${i}`)}</div>`)
+    .join("")}</div>`;
+
+// One row of the trait-by-trait checklist inside a walkthrough block.
+const chkRow = (label: string, value: string, ok: boolean) =>
+  `<div class="chk"><span>${label}</span><b>${value}</b><i class="${ok ? "y" : "n"}">${ok ? "&#10003;" : "&#10007;"}</i></div>`;
+
 const howtoDialogHtml = () => `
     <dialog id="howto">
       <div class="dialog-scroll">
         <h2>How to play</h2>
+        <p class="premise">Blorbs love company. Help them into <b>pods</b> where nobody's the odd one out.</p>
         <p>Every Blorb has 4 features: colour, eyes, shape, and antennae.</p>
         <div class="legend">
           ${legendRow("Colour", "hc", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
@@ -103,14 +114,26 @@ const howtoDialogHtml = () => `
           ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
           ${legendRow("Antennae", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
         </div>
-        <p>A Set is 3 Blorbs where each feature is the same on all three, or different on all three.</p>
-        <div class="example">${([[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]] as const)
-          .map((c, i) => `<span>${renderBlorb(c, `ht${i}`)}</span>`).join("")}</div>
-        <p class="caption">Three different colours, everything else the same. That's a Set.</p>
-        <div class="example">${([[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]] as const)
-          .map((c, i) => `<span>${renderBlorb(c, `hx${i}`)}</span>`).join("")}</div>
-        <p class="caption">Every feature different on all three. Also a Set.</p>
-        <p>If one feature is two of a kind, it's not a Set.</p>
+        <div class="rule">A <b>pod</b> is 3 Blorbs where each feature is the same on all three, or different on all three. No odd one out.</div>
+        <div class="walk ok">
+          <div class="wh">Is this a pod?</div>
+          ${trioHtml("hw", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
+          ${chkRow("colour", "all different", true)}
+          ${chkRow("eyes", "all same", true)}
+          ${chkRow("shape", "all same", true)}
+          ${chkRow("antennae", "all same", true)}
+          <div class="verdict ok">No odd one out. It's a pod!</div>
+        </div>
+        <div class="walk no">
+          <div class="wh">And this one?</div>
+          ${trioHtml("hn", [[0, 0, 0, 0], [0, 1, 0, 0], [1, 2, 0, 0]], 2)}
+          ${chkRow("colour", "two blue, one orange", false)}
+          <div class="verdict no">The orange one is the odd one out. Not a pod.</div>
+        </div>
+        <div class="walk">
+          ${trioHtml("hx", [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]])}
+          <div class="verdict ok">Every feature different on all three. Also a pod.</div>
+        </div>
         <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
       </div>
       <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
