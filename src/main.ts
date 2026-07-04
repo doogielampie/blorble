@@ -212,6 +212,8 @@ const openHowTo = () => {
   dlg.showModal();
   blurAutofocus();
   dlg.querySelector(".dialog-scroll")!.scrollTop = 0; // reset scroll position
+  saved = { ...saved, seenHowTo: true };
+  persist();
 };
 
 // ---------- timer ----------
@@ -256,10 +258,14 @@ const renderCurtain = () => {
     `<div class="curtain-meta mut">${m.size} Blorbs · ${m.targetSets} Pods</div>` +
     `<button id="btn-play" class="primary">Play</button>` +
     `<button id="btn-practice-instead" class="linkish">practice instead</button>` +
+    (saved.seenHowTo
+      ? ""
+      : `<button id="btn-howto-nudge" class="linkish">New here? How to play</button>`) +
     `</div></div>`;
   renderFound();
   el("btn-play").addEventListener("click", () => reveal());
   el("btn-practice-instead").addEventListener("click", () => showGame(session.mode, true));
+  document.getElementById("btn-howto-nudge")?.addEventListener("click", () => openHowTo());
 };
 
 const miniTrio = (key: string, slot: number) =>

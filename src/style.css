@@ -72,7 +72,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .curtain-card h3 { margin: 0 0 2px; font-size: 18px; }
 .curtain-meta { font-size: 13px; font-weight: 600; margin-bottom: 12px; }
 .curtain-card .primary { width: 100%; padding: 12px 0; }
-.curtain-card .linkish { display: inline-block; margin-top: 10px; }
+.curtain-card .linkish { display: block; margin: 10px auto 0; }
 
 /* hint row */
 #hint-row { display: flex; justify-content: flex-end; }
