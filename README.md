@@ -1,8 +1,8 @@
 # Blorble 👾
 
 **Blorble** is a free daily monster-matching puzzle. Every day choose your challenge:
-**Blorblet** (9 Blorbs hiding exactly 4 Sets — the quick one) or **Blorble** (12 Blorbs
-hiding exactly 6 Sets). Trios where each feature (colour, eye count, shape, antennae)
+**Blorblet** (9 Blorbs hiding exactly 4 Pods — the quick one) or **Blorble** (12 Blorbs
+hiding exactly 6 Pods). Trios where each feature (colour, eye count, shape, antennae)
 is either the same on all three Blorbs or different on all three. Find them all, race
 the clock, and share your time. New board at midnight UTC; unlimited practice boards included.
 
@@ -15,10 +15,10 @@ clock only starts when you do. Practice boards live one quiet link away.
 ## Hints & Honest Shares
 
 Stuck? Hit the hint button: with nothing selected it points at a Blorb from an unfound
-Set; otherwise it builds on your selection, or shakes it if it can't become a Set. When
+pod; otherwise it builds on your selection, or shakes it if it can't become a pod. When
 you solve, your result line shows your time plus 💡 hints used and
 ✖️ wrong guesses (or ✨ for a clean solve). The result popup is a printable-style **receipt**
-— mode, sets found, hints, grumps, and your time — that copies to a shareable image so you
+— mode, pods found, hints, grumps, and your time — that copies to a shareable image so you
 can post your win.
 
 ## Develop

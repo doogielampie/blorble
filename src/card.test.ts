@@ -32,9 +32,9 @@ describe("receiptModel", () => {
   test("daily, hints + grumps: title, size line, itemised rows, date, url", () => {
     const m = receiptModel({ ...base, hints: 1, wrongs: 2 });
     expect(m.title).toBe("BLORBLE");
-    expect(m.size).toBe("12 Blorbs · 6 Sets");
+    expect(m.size).toBe("12 Blorbs · 6 Pods");
     expect(m.rows).toEqual([
-      { label: "SETS FOUND", value: "6 / 6" },
+      { label: "PODS FOUND", value: "6 / 6" },
       { label: "HINTS", value: "x 1" },
       { label: "GRUMPS", value: "x 2" },
     ]);
@@ -47,9 +47,9 @@ describe("receiptModel", () => {
   test("Blorblet clean solve: zero counts still listed, title + size reflect the small mode", () => {
     const m = receiptModel({ label: "Blorblet", isoDate: "2026-07-03", elapsedMs: 112_000, hints: 0, wrongs: 0, size: 9, sets: 4 });
     expect(m.title).toBe("BLORBLET");
-    expect(m.size).toBe("9 Blorbs · 4 Sets");
+    expect(m.size).toBe("9 Blorbs · 4 Pods");
     expect(m.rows).toEqual([
-      { label: "SETS FOUND", value: "4 / 4" },
+      { label: "PODS FOUND", value: "4 / 4" },
       { label: "HINTS", value: "x 0" },
       { label: "GRUMPS", value: "x 0" },
     ]);

@@ -230,7 +230,7 @@ const renderCurtain = () => {
     `<div class="curtain"><div class="curtain-card">` +
     `<div class="curtain-mascot">${renderBlorb([0, 1, 2, 0], "cm", "happy")}</div>` +
     `<h3>${m.label}</h3>` +
-    `<div class="curtain-meta mut">${m.size} Blorbs · ${m.targetSets} Sets</div>` +
+    `<div class="curtain-meta mut">${m.size} Blorbs · ${m.targetSets} Pods</div>` +
     `<button id="btn-play" class="primary">Play</button>` +
     `<button id="btn-practice-instead" class="linkish">practice instead</button>` +
     `</div></div>`;

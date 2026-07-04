@@ -23,9 +23,9 @@ export type ReceiptModel = {
 // shared PNG (canvas) render identically. Spoiler-free; no streak/best.
 export const receiptModel = (info: ShareInfo): ReceiptModel => ({
   title: info.label.toUpperCase(),
-  size: `${info.size} Blorbs · ${info.sets} Sets`,
+  size: `${info.size} Blorbs · ${info.sets} Pods`,
   rows: [
-    { label: "SETS FOUND", value: `${info.sets} / ${info.sets}` },
+    { label: "PODS FOUND", value: `${info.sets} / ${info.sets}` },
     { label: "HINTS", value: `x ${info.hints}` },
     { label: "GRUMPS", value: `x ${info.wrongs}` },
   ],
