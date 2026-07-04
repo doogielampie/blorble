@@ -92,15 +92,16 @@ const legendRow = (label: string, uidPrefix: string, cards: readonly [number, nu
       <span>${label}</span>
       <div class="row3">${cards.map((c, i) => `<span>${renderBlorb(c, `${uidPrefix}${i}`)}</span>`).join("")}</div>`;
 
-// A trio of Blorbs rendered as ".trio .cell" cells, with an optional index ringed as the odd one out.
+// A trio of Blorbs rendered bare on paper (matching the legend); the odd one out (if any)
+// renders grumpy — its pod-mates render happy. Expression carries the valence, not colour.
 const trioHtml = (uidPrefix: string, cards: readonly [number, number, number, number][], oddIndex?: number) =>
   `<div class="trio">${cards
-    .map((c, i) => `<div class="cell${i === oddIndex ? " odd" : ""}">${renderBlorb(c, `${uidPrefix}${i}`)}</div>`)
+    .map((c, i) => `<span>${renderBlorb(c, `${uidPrefix}${i}`, i === oddIndex ? "grumpy" : "happy")}</span>`)
     .join("")}</div>`;
 
 // One row of the trait-by-trait checklist inside a walkthrough block.
 const chkRow = (label: string, value: string, ok: boolean) =>
-  `<div class="chk"><span>${label}</span><b>${value}</b><i class="${ok ? "y" : "n"}">${ok ? "&#10003;" : "&#10007;"}</i></div>`;
+  `<div class="chk"><span>${label}</span><b>${value}</b><i>${ok ? "&#10003;" : "&#10007;"}</i></div>`;
 
 const howtoDialogHtml = () => `
     <dialog id="howto">
@@ -114,25 +115,26 @@ const howtoDialogHtml = () => `
           ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
           ${legendRow("Antennae", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
         </div>
-        <div class="rule">A <b>pod</b> is 3 Blorbs where each feature is the same on all three, or different on all three. No odd one out.</div>
-        <div class="walk ok">
+        <hr class="hr">
+        <p class="rule">A <b>pod</b> is 3 Blorbs where each feature is the same on all three, or different on all three. No odd one out.</p>
+        <div class="walk">
           <div class="wh">Is this a pod?</div>
           ${trioHtml("hw", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
           ${chkRow("colour", "all different", true)}
           ${chkRow("eyes", "all same", true)}
           ${chkRow("shape", "all same", true)}
           ${chkRow("antennae", "all same", true)}
-          <div class="verdict ok">No odd one out. It's a pod!</div>
+          <div class="verdict">No odd one out. It's a pod!</div>
         </div>
-        <div class="walk no">
+        <div class="walk">
           <div class="wh">And this one?</div>
           ${trioHtml("hn", [[0, 0, 0, 0], [0, 1, 0, 0], [1, 2, 0, 0]], 2)}
           ${chkRow("colour", "two blue, one orange", false)}
-          <div class="verdict no">The orange one is the odd one out. Not a pod.</div>
+          <div class="verdict">The orange one is the odd one out. Not a pod.</div>
         </div>
         <div class="walk">
           ${trioHtml("hx", [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]])}
-          <div class="verdict ok">Every feature different on all three. Also a pod.</div>
+          <div class="verdict">Every feature different on all three. Also a pod.</div>
         </div>
         <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
       </div>
