@@ -25,14 +25,14 @@ describe("renderBlorb (canonical v2 port)", () => {
   test("antenna-tip channel from card[3]: ball / star / leaf, two of each", () => {
     const ball = renderBlorb([0, 0, 0, 0], "t");
     expect(count(ball, /r="10" fill="#2a2320"/g)).toBe(2);
-    expect(ball).not.toContain("#f0a91e");
+    expect(ball).not.toContain("#9b6bd3");
     expect(ball).not.toContain("#3fa346");
     const star = renderBlorb([0, 0, 0, 1], "t");
-    expect(count(star, /fill="#f0a91e"/g)).toBe(2);
+    expect(count(star, /fill="#9b6bd3"/g)).toBe(2);
     expect(star).not.toContain('r="10" fill="#2a2320"');
     const leaf = renderBlorb([0, 0, 0, 2], "t");
     expect(count(leaf, /fill="#3fa346"/g)).toBe(2);
-    expect(leaf).not.toContain("#f0a91e");
+    expect(leaf).not.toContain("#9b6bd3");
   });
 
   test("antenna bases adapt per shape (teardrop attaches lower)", () => {

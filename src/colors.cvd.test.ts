@@ -41,10 +41,30 @@ describe("colour-vision-deficiency separation (BLORB-SPEC: adjust hexes only)", 
   }
 });
 
-// The antenna-tip channel is SILHOUETTE-coded (ink disc / 10-point star /
+// v2.5 regression gate (player feedback): the star's original gold #f0a91e sat
+// too close to the orange body #f2953c — same hue family and lightness —
+// causing figure-ground loss and cross-channel echo while scanning. Tip fills
+// must stay clearly separated from every body colour under NORMAL vision.
+// Deliberately NOT CVD-gated: the tip silhouette carries the channel (doctrine
+// in blorb.ts), and the violet star's protanopia drift toward blue is an
+// accepted trade-off.
+describe("tip fills vs body colours (normal vision — the gold/orange regression)", () => {
+  // Measured 2026-07-15: violet's floor is 40.5 (vs the blue body); the old
+  // gold sat 18.9 from orange — the pairing this gate exists to keep dead.
+  test("every tip fill keeps ΔE ≥ 25 from every body colour", () => {
+    const tipLabs = TIP_COLORS.map((c) => toLab(hexToLinear(c)));
+    const bodyLabs = COLORS.map((c) => toLab(hexToLinear(c)));
+    for (let t = 0; t < 3; t++)
+      for (let b = 0; b < 3; b++)
+        expect(deltaE(tipLabs[t]!, bodyLabs[b]!), `${TIP_COLORS[t]} vs ${COLORS[b]}`).toBeGreaterThanOrEqual(25);
+  });
+});
+
+// The antenna-tip channel is SILHOUETTE-coded (ink disc / 5-point star /
 // tilted leaf) — colour is reinforcement only, so the gate is relaxed vs the
-// body trio's ≥30. Measured: gold-vs-green ΔE 24.0 under protanopia is the
-// floor case; ink-vs-either is ≥55 under both dichromacies.
+// body trio's ≥30. Measured with the violet star (2026-07-15): the floor is
+// ink-vs-green ΔE 55.2 under deuteranopia (the old floor was the gold star
+// vs green at 24.0 — the recolour widened this gate's margin too).
 describe("antenna-tip trio separation (relaxed gate — shape carries the channel)", () => {
   for (const mode of ["protan", "deutan"] as const) {
     test(`tip trio ΔE ≥ 20 under ${mode}opia`, () => {

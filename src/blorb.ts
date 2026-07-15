@@ -5,15 +5,19 @@ import type { Card } from "./deck";
 // The art is final — do not restyle or re-derive. v2 change: the 4th channel
 // is the ANTENNA-TIP style (ball/star/leaf), replacing v1's pattern channel.
 // The channel is carried by tip SILHOUETTE (ink disc / 5-point star / tilted
-// leaf); the gold/green fills are reinforcement only, so it cannot collapse
+// leaf); the violet/green fills are reinforcement only, so it cannot collapse
 // under colour-vision deficiency (see colors.cvd.test.ts).
 export const INK = "#2a2320";
 // CVD-adjusted 2026-07-01 (hex-only change sanctioned by BLORB-SPEC): the
 // original blue #3f9fe0 / pink #e56aa8 collapse to ΔE≈19 under protanopia.
 // src/colors.cvd.test.ts enforces the separation.
 export const COLORS: readonly string[] = ["#1f97f0", "#f2953c", "#eb648c"]; // blue / orange / pink
-// Tip trio: ball(ink) / star(gold) / leaf(green) — relaxed CVD gate in colors.cvd.test.ts.
-export const TIP_COLORS: readonly string[] = [INK, "#f0a91e", "#3fa346"];
+// Tip trio: ball(ink) / star(violet) / leaf(green) — relaxed CVD gate in colors.cvd.test.ts.
+// Star recoloured 2026-07-15 (hex-only change sanctioned by BLORB-SPEC): the
+// original gold #f0a91e sat ΔE≈19 from the orange body under normal vision —
+// figure-ground loss + cross-channel echo. colors.cvd.test.ts now gates every
+// tip fill vs every body colour (normal vision, ΔE ≥ 25).
+export const TIP_COLORS: readonly string[] = [INK, "#9b6bd3", "#3fa346"];
 
 export type Expression = "rest" | "happy" | "grumpy";
 
