@@ -22,6 +22,16 @@ export type ShareInfo = {
   sets: number;        // target Sets (4 | 6) — for the receipt
 };
 
+// The OS share sheet is a TOUCH-device affordance. Desktop Chrome/Safari also
+// report canShare({files}) = true, but their share UI is a popover anchored to
+// browser chrome (macOS: near the omnibox) that is easy to miss while the
+// pending share() eats the click — which made "Copy image" appear to need a
+// double click (the 2nd click's share() rejects InvalidStateError and falls
+// through to the clipboard). Gate the sheet on the primary pointer being
+// coarse; fine-pointer devices go straight to the clipboard the label promises.
+export const preferShareSheet = (canShareFiles: boolean, coarsePointer: boolean): boolean =>
+  canShareFiles && coarsePointer;
+
 // Spoiler-free, honesty-first: raw time plus what it took. ✨ = clean solve.
 export const shareText = ({ label, isoDate, elapsedMs, hints, wrongs, practice = false }: ShareInfo): string => {
   const marks = hints === 0 && wrongs === 0

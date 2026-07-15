@@ -5,7 +5,7 @@ import { MODES, type DealtBoard, type PuzzleMode, dailyBoard, practiceBoard } fr
 import { receiptModel, renderStatsCard } from "./card";
 import { type GameState, hint, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
-import { type ShareInfo, formatDate, formatTime, shareText } from "./share";
+import { type ShareInfo, formatDate, formatTime, preferShareSheet, shareText } from "./share";
 import type { Card } from "./deck";
 import { type DayProgress, type SavedState, freshDay, load, recordWin, save, unlocksBlorblest } from "./state";
 
@@ -571,10 +571,15 @@ const onCopyText = async (btn: HTMLElement) => {
 const onCopyImage = async (btn: HTMLElement) => {
   if (!statsBlob) return;
   const file = new File([statsBlob], `blorble-${DATE_ISO}.png`, { type: "image/png" });
-  if (navigator.canShare?.({ files: [file] })) {
+  // Share sheet on touch devices only — see preferShareSheet for the desktop
+  // double-click bug this gate fixes.
+  if (preferShareSheet(navigator.canShare?.({ files: [file] }) ?? false, matchMedia("(pointer: coarse)").matches)) {
     try { await navigator.share({ files: [file] }); return; }
     catch (e) {
-      if ((e as DOMException).name === "AbortError") return; // user cancelled the share sheet
+      const name = (e as DOMException).name;
+      // AbortError: user cancelled. InvalidStateError: a sheet is already
+      // open (double-tap) — falling through would spuriously copy/download.
+      if (name === "AbortError" || name === "InvalidStateError") return;
     }
   }
   try {

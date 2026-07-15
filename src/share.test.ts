@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { formatDate, formatTime, shareText } from "./share";
+import { formatDate, formatTime, preferShareSheet, shareText } from "./share";
 
 describe("share", () => {
   test("formatTime", () => {
@@ -30,5 +30,15 @@ describe("share", () => {
   test("shareText: practice replaces the date", () => {
     expect(shareText({ label: "Blorblet", isoDate: "2026-07-02", elapsedMs: 61_000, hints: 0, wrongs: 0, practice: true, size: 9, sets: 4 }))
       .toBe("Blorblet · practice · ⏱ 1:01 · ✨");
+  });
+
+  // Regression: desktop Chrome reports canShare({files}) = true, but its
+  // share popover opens in browser chrome (easy to miss) and the pending
+  // share() ate the first "Copy image" click. The share sheet is a
+  // touch-device affordance — desktop must go straight to the clipboard.
+  test("preferShareSheet: OS share sheet only on coarse-pointer devices", () => {
+    expect(preferShareSheet(true, true)).toBe(true); // phone/tablet with file share
+    expect(preferShareSheet(true, false)).toBe(false); // DESKTOP despite canShare=true
+    expect(preferShareSheet(false, true)).toBe(false); // touch but no file share
   });
 });
