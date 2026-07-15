@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { type Card, DECK, allSets, isSet } from "./deck";
+import { type Card, DECK, DECK5, allSets, isSet } from "./deck";
 import { mulberry32 } from "./seed";
 
 describe("deck", () => {
@@ -26,6 +26,20 @@ describe("deck", () => {
       );
       expect(completions.length).toBe(1);
     }
+  });
+
+  test("DECK5 has 243 unique 5-feature cards; DECK stays 4-feature", () => {
+    expect(DECK5.length).toBe(243);
+    expect(new Set(DECK5.map((c) => c.join(""))).size).toBe(243);
+    expect(DECK5.every((c) => c.length === 5)).toBe(true);
+    expect(DECK.every((c) => c.length === 4)).toBe(true);
+  });
+
+  test("isSet judges the 5th attribute on 5-feature cards", () => {
+    expect(isSet([0, 0, 0, 0, 0], [0, 0, 0, 0, 1], [0, 0, 0, 0, 2])).toBe(true);
+    expect(isSet([0, 0, 0, 0, 0], [1, 1, 1, 1, 0], [2, 2, 2, 2, 0])).toBe(true);
+    // first four attributes form a Set, but fill is two-and-one — not a Pod
+    expect(isSet([0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 0])).toBe(false);
   });
 
   test("allSets finds sorted index triples on a known board", () => {
