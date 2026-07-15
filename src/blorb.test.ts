@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { COLORS, renderBlorb } from "./blorb";
+import { COLORS, darken, renderBlorb } from "./blorb";
 
 const count = (s: string, re: RegExp) => (s.match(re) ?? []).length;
 
@@ -58,6 +58,44 @@ describe("renderBlorb (canonical v2 port)", () => {
     expect(renderBlorb([0, 0, 0, 0], "a")).toContain('id="bshade-a"');
     expect(renderBlorb([0, 0, 0, 0], "b")).toContain('id="bclip-b"');
     expect(renderBlorb([0, 0, 0, 0], "a")).not.toMatch(/<clipPath[^>]*><g/);
+  });
+});
+
+describe("fill channel (optional 5th attribute — blorblest)", () => {
+  test("absent and solid (0) are byte-identical to the 4-tuple render", () => {
+    const four = renderBlorb([1, 2, 1, 2], "t");
+    expect(renderBlorb([1, 2, 1, 2, 0], "t")).toBe(four);
+    expect(renderBlorb([1, 2, 1, 2, 0], "t", "happy")).toBe(renderBlorb([1, 2, 1, 2], "t", "happy"));
+  });
+
+  test("striped: four clipped stripe bands in the darkened body colour", () => {
+    const s = renderBlorb([0, 0, 0, 0, 1], "t");
+    expect(count(s, /stroke-width="21"/g)).toBe(4);
+    expect(s).toContain(`stroke="${darken(COLORS[0]!, 0.44)}"`);
+    expect(s).toContain('d="M-24 50 Q100 67 224 50"'); // v1 pattern band formula
+    expect(count(s, /clip-path="url\(#bclip-t\)"/g)).toBe(2); // marks + shading
+  });
+
+  test("spotted: staggered clipped spot grid in the darkened body colour", () => {
+    const s = renderBlorb([2, 0, 0, 0, 2], "t");
+    expect(count(s, /r="8.5"/g)).toBe(42);
+    expect(s).toContain(`fill="${darken(COLORS[2]!, 0.44)}"`);
+    expect(s).not.toContain('stroke-width="21"');
+  });
+
+  test("marks sit between body fill and shading (shading tones the marks)", () => {
+    const s = renderBlorb([1, 0, 0, 0, 1], "t");
+    const body = s.indexOf(`fill="${COLORS[1]}"`);
+    const marks = s.indexOf('stroke-width="21"');
+    const shade = s.indexOf('fill="url(#bshade-t)"');
+    expect(body).toBeGreaterThan(-1);
+    expect(body).toBeLessThan(marks);
+    expect(marks).toBeLessThan(shade);
+  });
+
+  test("darken multiplies each RGB channel by 1-f", () => {
+    expect(darken("#1f97f0", 0.44)).toBe("#115586"); // blue body → stripe/spot ink
+    expect(darken("#ffffff", 0.44)).toBe("#8f8f8f");
   });
 });
 

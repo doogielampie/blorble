@@ -102,6 +102,37 @@ const browsSvg = (n: number): string => {
     .join("");
 };
 
+// Fill marks (optional 5th channel, blorblest only): solid / striped / spotted,
+// the revival of v1's pattern channel (design/blorble/BLORB-SPEC.md). Marks are
+// the body colour darkened 0.44 — same hue, so CVD separation is inherited from
+// the body trio. Stripes reuse the v1 band formula; spots are a staggered grid
+// (shape-agnostic — the body clip does the fitting). Solid/absent emit NOTHING,
+// keeping 4-channel output byte-identical (pinned in blorb.test.ts).
+export const darken = (hex: string, f: number): string =>
+  `#${[1, 3, 5]
+    .map((i) =>
+      Math.round(parseInt(hex.slice(i, i + 2), 16) * (1 - f))
+        .toString(16)
+        .padStart(2, "0"),
+    )
+    .join("")}`;
+
+const fillMarksSvg = (fi: number | undefined, color: string, clip: string): string => {
+  if (!fi) return "";
+  const dark = darken(color, 0.44);
+  if (fi === 1) {
+    const bands = [50, 92, 134, 176]
+      .map((y) => `<path d="M-24 ${y} Q100 ${y + 17} 224 ${y}" fill="none" stroke="${dark}" stroke-width="21"/>`)
+      .join("");
+    return `<g clip-path="url(#${clip})">${bands}</g>`;
+  }
+  const spots: string[] = [];
+  for (let r = 0; r < 7; r++)
+    for (let c = 0; c < 6; c++)
+      spots.push(`<circle cx="${24 + c * 30 + (r % 2 ? 15 : 0)}" cy="${34 + r * 26}" r="8.5"/>`);
+  return `<g clip-path="url(#${clip})" fill="${dark}">${spots.join("")}</g>`;
+};
+
 // Resting fang mouth is canonical; happy/grumpy are sanctioned eye/mouth swaps.
 const MOUTHS: Record<Expression, string> = {
   rest: `<path d="M84 148 Q100 172 116 148 Z" fill="${INK}"/><path d="M94 148 L102 148 L98 158 Z" fill="#fff"/>`,
@@ -109,10 +140,11 @@ const MOUTHS: Record<Expression, string> = {
   grumpy: `<path d="M84 164 Q100 142 116 164 Z" fill="${INK}"/><path d="M94 164 L102 164 L98 155 Z" fill="#fff"/>`,
 };
 
-// card = [colour 0-2, eyes 0-2 (renders 1-3), shape 0-2, antenna-tip 0-2 (ball/star/leaf)]
+// card = [colour 0-2, eyes 0-2 (renders 1-3), shape 0-2, antenna-tip 0-2 (ball/star/leaf),
+// fill? 0-2 (solid/striped/spotted — blorblest only; absent renders as solid)]
 // uid must be unique per <svg> in the document (bclip-/bshade- ids are document-global).
 export const renderBlorb = (card: Card, uid: string, expression: Expression = "rest"): string => {
-  const [ci, ei, si, ti] = card;
+  const [ci, ei, si, ti, fi] = card;
   const clip = `bclip-${uid}`;
   const shade = `bshade-${uid}`;
   const color = COLORS[ci]!;
@@ -132,6 +164,8 @@ export const renderBlorb = (card: Card, uid: string, expression: Expression = "r
     antennaeSvg(si, ti) +
     // 3. body fill (no stroke)
     el(`fill="${color}"`) +
+    // 3b. fill marks (5th channel) — under the shading so it tones them too
+    fillMarksSvg(fi, color, clip) +
     // 4. soft vertical shading, clipped to the FULL body silhouette
     `<g clip-path="url(#${clip})">${el(`fill="url(#${shade})"`)}</g>` +
     // 5. crisp outline ON TOP (never covered by the shading)
