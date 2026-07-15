@@ -51,23 +51,26 @@ const storage: Pick<Storage, "getItem" | "setItem"> = DEV_SESSION
     }
   : localStorage;
 let saved: SavedState = freshDay(load(storage), DATE_ISO);
-// Another same-origin tab may be playing the OTHER daily — merge its freshest
-// same-date progress and bests before writing, so last-writer doesn't clobber.
+// Another same-origin tab may be playing a DIFFERENT daily — merge each other
+// mode's freshest same-date progress and all bests before writing, so
+// last-writer doesn't clobber. The unlock flag is one-way, so OR it in.
 const persist = () => {
   const disk = load(storage);
-  const other: PuzzleMode = session.mode === "blorble" ? "blorblet" : "blorble";
   const minNonNull = (a: number | null, b: number | null) =>
     a === null ? b : b === null ? a : Math.min(a, b);
+  const modes = Object.keys(MODES) as PuzzleMode[];
   saved = {
     ...saved,
-    days: {
-      ...saved.days,
-      [other]: disk.days[other]?.date === DATE_ISO ? disk.days[other] : saved.days[other],
-    },
-    best: {
-      blorble: minNonNull(saved.best.blorble, disk.best.blorble),
-      blorblet: minNonNull(saved.best.blorblet, disk.best.blorblet),
-    },
+    blorblestUnlocked: saved.blorblestUnlocked || disk.blorblestUnlocked,
+    days: Object.fromEntries(
+      modes.map((m) => [
+        m,
+        m !== session.mode && disk.days[m]?.date === DATE_ISO ? disk.days[m] : saved.days[m],
+      ]),
+    ) as SavedState["days"],
+    best: Object.fromEntries(
+      modes.map((m) => [m, minNonNull(saved.best[m], disk.best[m])]),
+    ) as SavedState["best"],
   };
   save(storage, saved);
 };

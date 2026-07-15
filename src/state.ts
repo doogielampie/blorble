@@ -15,6 +15,8 @@ export type SavedState = {
   lastWinDate: string | null;
   best: Record<PuzzleMode, number | null>;
   seenHowTo: boolean;
+  // One-way v2.5 easter-egg flag: set by a clean daily-Blorble solve, never cleared.
+  blorblestUnlocked: boolean;
   lastMode: PuzzleMode;
   days: Record<PuzzleMode, DayProgress | null>;
 };
@@ -22,8 +24,9 @@ export type SavedState = {
 // lastMode "blorblet": with nothing stored, boot lands on the Blorblet fresh
 // daily (v2.2 §1 — "last-played mode if stored, else Blorblet").
 export const initialState = (): SavedState => ({
-  v: 2, streak: 0, lastWinDate: null, best: { blorble: null, blorblet: null },
-  seenHowTo: false, lastMode: "blorblet", days: { blorble: null, blorblet: null },
+  v: 2, streak: 0, lastWinDate: null, best: { blorble: null, blorblet: null, blorblest: null },
+  seenHowTo: false, blorblestUnlocked: false, lastMode: "blorblet",
+  days: { blorble: null, blorblet: null, blorblest: null },
 });
 
 const DAY_MS = 86_400_000;
@@ -32,14 +35,15 @@ const daysBetween = (aIso: string, bIso: string): number =>
 
 // Called when a daily's last Set is found. Streak moves at most once per day;
 // per-mode best/elapsed always record. Same-mode same-day repeats are no-ops.
+// Blorblest is self-contained: it records best/day but NEVER moves the streak.
 export const recordWin = (s: SavedState, mode: PuzzleMode, dateIso: string, elapsedMs: number): SavedState => {
   if (s.days[mode]?.date === dateIso && s.days[mode]?.elapsedMs != null) return s;
   const best = s.best[mode];
   return {
     ...s,
-    streak: s.lastWinDate === dateIso ? s.streak
+    streak: mode === "blorblest" || s.lastWinDate === dateIso ? s.streak
       : s.lastWinDate !== null && daysBetween(s.lastWinDate, dateIso) === 1 ? s.streak + 1 : 1,
-    lastWinDate: dateIso,
+    lastWinDate: mode === "blorblest" ? s.lastWinDate : dateIso,
     best: { ...s.best, [mode]: best === null ? elapsedMs : Math.min(best, elapsedMs) },
     days: {
       ...s.days,
@@ -57,6 +61,7 @@ export const freshDay = (s: SavedState, dateIso: string): SavedState => ({
   days: {
     blorble: s.days.blorble?.date === dateIso ? s.days.blorble : null,
     blorblet: s.days.blorblet?.date === dateIso ? s.days.blorblet : null,
+    blorblest: s.days.blorblest?.date === dateIso ? s.days.blorblest : null,
   },
 });
 
@@ -72,15 +77,20 @@ export const load = (storage: Pick<Storage, "getItem">): SavedState => {
     const raw = storage.getItem(KEY);
     if (!raw) return initialState();
     const parsed = JSON.parse(raw) as SavedState | V1State;
-    if (parsed.v === 2) return { ...initialState(), ...parsed };
+    // Top-level spread heals new fields, but it's SHALLOW — best/days from an
+    // older save would lack the blorblest key at runtime, so heal them too.
+    if (parsed.v === 2) {
+      const base = initialState();
+      return { ...base, ...parsed, best: { ...base.best, ...parsed.best }, days: { ...base.days, ...parsed.days } };
+    }
     if (parsed.v === 1)
       return {
         ...initialState(),
         streak: parsed.streak,
         lastWinDate: parsed.lastWinDate,
-        best: { blorble: parsed.bestMs, blorblet: null },
+        best: { blorble: parsed.bestMs, blorblet: null, blorblest: null },
         seenHowTo: parsed.seenHowTo,
-        days: { blorble: parsed.day ? { ...parsed.day, hints: 0, wrongs: 0 } : null, blorblet: null },
+        days: { blorble: parsed.day ? { ...parsed.day, hints: 0, wrongs: 0 } : null, blorblet: null, blorblest: null },
       };
     return initialState();
   } catch {
