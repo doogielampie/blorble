@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { freshDay, initialState, load, recordWin, save } from "./state";
+import { freshDay, initialState, load, recordWin, save, unlocksBlorblest } from "./state";
 
 const fakeStorage = () => {
   const m = new Map<string, string>();
@@ -62,6 +62,14 @@ describe("state v2", () => {
     expect(s.lastWinDate).toBe("2026-07-01");
     expect(s.best.blorblest).toBe(300_000);
     expect(s.days.blorblest?.elapsedMs).toBe(300_000);
+  });
+
+  test("unlocksBlorblest: only a clean daily-Blorble solve qualifies", () => {
+    expect(unlocksBlorblest("blorble", 0, 0)).toBe(true);
+    expect(unlocksBlorblest("blorble", 1, 0)).toBe(false); // a hint disqualifies
+    expect(unlocksBlorblest("blorble", 0, 2)).toBe(false); // a wrong tap disqualifies
+    expect(unlocksBlorblest("blorblet", 0, 0)).toBe(false); // the easy tier never unlocks
+    expect(unlocksBlorblest("blorblest", 0, 0)).toBe(false);
   });
 
   test("blorblestUnlocked persists through save/load", () => {

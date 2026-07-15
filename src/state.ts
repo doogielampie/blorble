@@ -65,6 +65,13 @@ export const freshDay = (s: SavedState, dateIso: string): SavedState => ({
   },
 });
 
+// The Blorblest easter egg is earned by a CLEAN daily-Blorble solve — the
+// receipt's ✨ predicate (no hints, no wrong taps). Blorblet is the easy tier
+// and blorblest can't re-unlock itself; practice is excluded at the call site
+// (practice wins never record).
+export const unlocksBlorblest = (mode: PuzzleMode, hints: number, wrongs: number): boolean =>
+  mode === "blorble" && hints === 0 && wrongs === 0;
+
 const KEY = "blorble.v1";
 
 type V1State = {

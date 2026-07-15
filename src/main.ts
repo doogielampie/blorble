@@ -6,7 +6,8 @@ import { receiptModel, renderStatsCard } from "./card";
 import { type GameState, hint, tap, trioKey } from "./game";
 import { todayIso } from "./seed";
 import { type ShareInfo, formatDate, formatTime, shareText } from "./share";
-import { type DayProgress, type SavedState, freshDay, load, recordWin, save } from "./state";
+import type { Card } from "./deck";
+import { type DayProgress, type SavedState, freshDay, load, recordWin, save, unlocksBlorblest } from "./state";
 
 // Dev/raster affordances: ?date=YYYY-MM-DD forces the daily date; ?autoplay=1 skips the curtain.
 const params = new URLSearchParams(location.search);
@@ -91,13 +92,13 @@ const closeIcon = () =>
   `<svg viewBox="0 0 24 24" width="15" height="15"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" fill="none"/></svg>`;
 
 // Legend rows render actual Blorbs so a beginner sees each feature, not just reads its name.
-const legendRow = (label: string, uidPrefix: string, cards: readonly [number, number, number, number][]) => `
+const legendRow = (label: string, uidPrefix: string, cards: readonly Card[]) => `
       <span>${label}</span>
       <div class="row3">${cards.map((c, i) => `<span>${renderBlorb(c, `${uidPrefix}${i}`)}</span>`).join("")}</div>`;
 
 // A trio of Blorbs rendered bare on paper (matching the legend); the odd one out (if any)
 // renders grumpy — its pod-mates render happy. Expression carries the valence, not colour.
-const trioHtml = (uidPrefix: string, cards: readonly [number, number, number, number][], oddIndex?: number) =>
+const trioHtml = (uidPrefix: string, cards: readonly Card[], oddIndex?: number) =>
   `<div class="trio">${cards
     .map((c, i) => `<span>${renderBlorb(c, `${uidPrefix}${i}`, i === oddIndex ? "grumpy" : "happy")}</span>`)
     .join("")}</div>`;
@@ -106,17 +107,19 @@ const trioHtml = (uidPrefix: string, cards: readonly [number, number, number, nu
 const chkRow = (label: string, value: string, ok: boolean) =>
   `<div class="chk"><span>${label}</span><b>${value}</b><i>${ok ? "&#10003;" : "&#10007;"}</i></div>`;
 
-const howtoDialogHtml = () => `
-    <dialog id="howto">
-      <div class="dialog-scroll">
+// `five` = the Blorblest variant: same locked v2.4 structure, one extra
+// feature woven in (fill legend row, fill checklist row, 5-tuple trios).
+// With five=false the output is the locked 4-feature how-to, unchanged.
+const howtoScrollHtml = (five: boolean) => `
         <h2>How to play</h2>
         <p class="premise">Blorbs love company. Help them into <b>pods</b> where nobody's the odd one out.</p>
-        <p>Every Blorb has 4 features: colour, eyes, shape, and antennae.</p>
+        <p>Every Blorb has ${five ? "5" : "4"} features: colour, eyes, shape, ${five ? "antennae, and fill" : "and antennae"}.</p>
         <div class="legend">
           ${legendRow("Colour", "hc", [[0, 1, 0, 0], [1, 1, 0, 0], [2, 1, 0, 0]])}
           ${legendRow("Eyes", "he", [[0, 0, 0, 0], [0, 1, 0, 0], [0, 2, 0, 0]])}
           ${legendRow("Shape", "hs", [[0, 1, 0, 0], [0, 1, 1, 0], [0, 1, 2, 0]])}
           ${legendRow("Antennae", "hp", [[0, 1, 0, 0], [0, 1, 0, 1], [0, 1, 0, 2]])}
+          ${five ? legendRow("Fill", "hf", [[0, 1, 0, 0, 0], [0, 1, 0, 0, 1], [0, 1, 0, 0, 2]]) : ""}
         </div>
         <hr class="hr">
         <p class="rule">A <b>pod</b> is 3 Blorbs where each feature is the same on all three, or different on all three. No odd one out.</p>
@@ -127,6 +130,7 @@ const howtoDialogHtml = () => `
           ${chkRow("eyes", "all same", true)}
           ${chkRow("shape", "all same", true)}
           ${chkRow("antennae", "all same", true)}
+          ${five ? chkRow("fill", "all same", true) : ""}
           <div class="verdict">No odd one out. It's a pod!</div>
         </div>
         <div class="walk">
@@ -136,11 +140,16 @@ const howtoDialogHtml = () => `
           <div class="verdict">The orange one is the odd one out. Not a pod.</div>
         </div>
         <div class="walk">
-          ${trioHtml("hx", [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]])}
+          ${five
+            ? trioHtml("hx", [[0, 0, 0, 0, 0], [1, 1, 1, 1, 1], [2, 2, 2, 2, 2]])
+            : trioHtml("hx", [[0, 0, 0, 0], [1, 1, 1, 1], [2, 2, 2, 2]])}
           <div class="verdict">Every feature different on all three. Also a pod.</div>
         </div>
-        <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>
-      </div>
+        <p class="fineprint">inspired by the card game SET · not affiliated with Set Enterprises/PlayMonster</p>`;
+
+const howtoDialogHtml = () => `
+    <dialog id="howto">
+      <div class="dialog-scroll">${howtoScrollHtml(false)}</div>
       <button class="dialog-x" aria-label="Close">${closeIcon()}</button>
     </dialog>`;
 
@@ -193,7 +202,8 @@ const shell = () => {
 };
 
 // Row 2 of the top bar: Blorblet | Blorble (✓ once that daily is done today),
-// plus a temporary third "Practice" segment while practicing (locked P2c).
+// plus Blorblest once earned (or while deep-linked into it), plus a temporary
+// "Practice" segment while practicing (locked P2c).
 const renderSeg = () => {
   const tick = (mode: PuzzleMode) =>
     saved.days[mode]?.elapsedMs != null ? `<span class="tick">✓</span>` : "";
@@ -203,7 +213,16 @@ const renderSeg = () => {
   el("seg").innerHTML =
     opt("blorblet") +
     opt("blorble") +
+    (saved.blorblestUnlocked || session.mode === "blorblest" ? opt("blorblest") : "") +
     (session.practice ? `<button class="opt active" data-seg="practice">Practice</button>` : "");
+};
+
+// One-shot reveal flourish when a clean Blorble solve earns the hidden tier.
+let justUnlockedBlorblest = false;
+const popBlorblestSeg = () => {
+  const btn = el("seg").querySelector('[data-seg="blorblest"]');
+  btn?.classList.add("unlock-pop");
+  window.setTimeout(() => btn?.classList.remove("unlock-pop"), 900);
 };
 
 // showModal autofocuses the first focusable element (the dialog ×) and Chrome
@@ -214,6 +233,8 @@ const blurAutofocus = () => (document.activeElement as HTMLElement | null)?.blur
 
 const openHowTo = () => {
   const dlg = el("howto") as HTMLDialogElement;
+  // Blorblest teaches its 5th feature; every other mode keeps the locked v2.4 how-to.
+  dlg.querySelector(".dialog-scroll")!.innerHTML = howtoScrollHtml(session.mode === "blorblest");
   dlg.showModal();
   blurAutofocus();
   dlg.querySelector(".dialog-scroll")!.scrollTop = 0; // reset scroll position
@@ -258,7 +279,8 @@ const renderCurtain = () => {
       .map((_, i) => `<div class="card back">${cardBackSvg(i)}</div>`)
       .join("")}</div>` +
     `<div class="curtain"><div class="curtain-card">` +
-    `<div class="curtain-mascot">${renderBlorb([0, 1, 2, 0], "cm", "happy")}</div>` +
+    // The blorblest mascot wears spots — the curtain foreshadows the 5th feature.
+    `<div class="curtain-mascot">${renderBlorb(session.mode === "blorblest" ? [0, 1, 2, 0, 2] : [0, 1, 2, 0], "cm", "happy")}</div>` +
     `<h3>${m.label}</h3>` +
     `<div class="curtain-meta mut">${m.size} Blorbs · ${m.targetSets} Pods</div>` +
     `<button id="btn-play" class="primary">Play</button>` +
@@ -304,7 +326,7 @@ const setFace = (i: number, expression: Expression) => {
 // Generation-guarded: daily boards have overlapping Sets, and the user can
 // switch screens mid-window — a stale timeout must not clobber a newer
 // reaction or touch a board that's gone.
-const reactGen: number[] = Array(12).fill(0);
+const reactGen: number[] = Array(Math.max(...Object.values(MODES).map((m) => m.size))).fill(0);
 const react = (trio: number[], expression: Expression, cls: string, ms: number) => {
   for (const i of trio) {
     reactGen[i] = (reactGen[i] ?? 0) + 1;
@@ -426,11 +448,22 @@ const win = () => {
   session.elapsedMs = Date.now() - (session.startedAt ?? Date.now());
   if (!session.practice) {
     saved = recordWin(saved, session.mode, DATE_ISO, session.elapsedMs);
+    // The easter egg: a clean daily Blorble reveals the hidden hard tier.
+    if (!saved.blorblestUnlocked && unlocksBlorblest(session.mode, session.hints, session.wrongs)) {
+      saved = { ...saved, blorblestUnlocked: true };
+      justUnlockedBlorblest = true;
+    }
     persist();
   }
   stopTimer();
   el("timer").textContent = formatTime(session.elapsedMs); // final time persists in the bar
   renderSeg(); // the finished mode's ✓ appears in the toggle
+  if (justUnlockedBlorblest) {
+    justUnlockedBlorblest = false;
+    popBlorblestSeg(); // pop now…
+    // …and again when the result dialog stops covering the toggle.
+    el("result").addEventListener("close", popBlorblestSeg, { once: true });
+  }
   for (let i = 0; i < session.deal.cards.length; i++) {
     setFace(i, "happy");
     cardEl(i).classList.add("happy");
@@ -598,7 +631,13 @@ shell();
 const qmode = params.get("mode");
 // `mode` deep-links a specific daily and namespaces dev/raster flows; landing
 // on a board is safe — the curtain keeps a fresh board's clock honest.
-const bootMode: PuzzleMode = qmode === "blorblet" ? "blorblet" : qmode === "blorble" ? "blorble" : saved.lastMode;
+// blorblest is deliberately linkable pre-unlock: the egg gates the UI, not the
+// URL (and dev/raster flows need to reach the board).
+const bootMode: PuzzleMode =
+  qmode === "blorblet" ? "blorblet"
+  : qmode === "blorble" ? "blorble"
+  : qmode === "blorblest" ? "blorblest"
+  : saved.lastMode;
 showGame(bootMode, params.get("practice") === "1");
 // ?autoplay=1 skips the curtain (it used to skip the landing) for raster/dev
 // flows; resumed or finished boards have no curtain to lift.
